@@ -1,7 +1,0 @@
-/data/syslog/userver/UServerHawk_APP_INFO.log /data/syslog/userver/UServerHawk.log {
-	daily
-	size 500M
-	rotate 14
-	copytruncate
-	missingok
-}
