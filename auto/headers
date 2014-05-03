@@ -1,0 +1,12 @@
+
+# Copyright (C) Jacky Wang
+
+
+oc_include="unistd.h";      . auto/include
+oc_include="inttypes.h";    . auto/include
+oc_include="limits.h";      . auto/include
+oc_include="sys/filio.h";   . auto/include
+oc_include="sys/param.h";   . auto/include
+oc_include="sys/mount.h";   . auto/include
+oc_include="sys/statvfs.h"; . auto/include
+oc_include="crypt.h";       . auto/include

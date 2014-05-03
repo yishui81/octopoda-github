@@ -1,0 +1,153 @@
+
+# Copyright (C) Igor Sysoev
+# Copyright (C) Nginx, Inc.
+
+
+help=no
+
+OC_PREFIX=
+OC_SBIN_PATH=
+OC_CONF_PREFIX=
+OC_CONF_PATH=
+OC_ERROR_LOG_PATH=
+OC_PID_PATH=
+OC_LOCK_PATH=
+OC_USER=
+OC_GROUP=
+UCE_TAG=
+
+CC=${CC:-c++}
+CPP=${CPP:-c++}
+OC_OBJS=objs
+
+OC_DEBUG=NO
+OC_CC_OPT=
+OC_LD_OPT=
+CPU=NO
+
+OC_RPATH=NO
+
+OC_PLATFORM=
+OC_WINE=
+
+EVENT_FOUND=NO
+
+OC_FILE_AIO=NO
+OC_IPV6=NO
+OC_ENABLE_SYSLOG=NO
+
+
+USE_OPENSSL=NO
+OPENSSL=NONE
+
+USE_MD5=NO
+MD5=NONE
+MD5_OPT=
+MD5_ASM=NO
+
+USE_SHA1=NO
+SHA1=NONE
+SHA1_OPT=
+SHA1_ASM=NO
+
+USE_ARE=YES
+ARE=NONE
+
+USE_ZLIB=NO
+ZLIB=NONE
+ZLIB_OPT=
+ZLIB_ASM=NO
+
+HTTP=NO
+opt=
+
+for option
+do
+    opt="$opt `echo $option | sed -e \"s/\(--[^=]*=\)\(.* .*\)/\1'\2'/\"`"
+
+    case "$option" in
+        -*=*) value=`echo "$option" | sed -e 's/[-_a-zA-Z0-9]*=//'` ;;
+           *) value="" ;;
+    esac
+
+    case "$option" in
+        --help)                          help=yes                   ;;
+        
+        --prefix=)                       OC_PREFIX="!"             ;;
+        --prefix=*)                      OC_PREFIX="$value"        ;;
+        --sbin-path=*)                   OC_SBIN_PATH="$value"     ;;
+        --conf-path=*)                   OC_CONF_PATH="$value"     ;;
+        --error-log-path=*)              OC_ERROR_LOG_PATH="$value";;
+        --pid-path=*)                    OC_PID_PATH="$value"      ;;
+        --lock-path=*)                   OC_LOCK_PATH="$value"     ;;
+        --user=*)                        OC_USER="$value"          ;;
+        --group=*)                       OC_GROUP="$value"         ;;
+
+        --crossbuild=*)                  OC_PLATFORM="$value"      ;;
+
+        --builddir=*)                    OC_OBJS="$value"          ;;
+
+
+        --with-file-aio)                 OC_FILE_AIO=YES           ;;
+        --with-ipv6)                     OC_IPV6=YES               ;;
+        --with-syslog)		              OC_ENABLE_SYSLOG=YES	    ;;
+          
+        *)
+            echo "$0: error: invalid option \"$option\""
+            exit 1
+        ;;
+    esac
+done
+
+
+OC_CONFIGURE="$opt"
+
+
+if [ $help = yes ]; then
+
+cat << END
+
+  --help                             print this message
+
+  --prefix=PATH                      set installation prefix
+  --sbin-path=PATH                   set octopoda binary pathname
+  --conf-path=PATH                   set octopoda.conf pathname
+  --error-log-path=PATH              set error log pathname
+  --pid-path=PATH                    set octopoda.pid pathname
+  --lock-path=PATH                   set octopoda.lock pathname
+
+  --user=USER                        set non-privileged user for
+                                     worker processes
+  --group=GROUP                      set non-privileged group for
+                                     worker processes
+
+  --builddir=DIR                     set build directory
+  --with-cc=PATH                     set C compiler pathname
+  --with-cpp=PATH                    set C preprocessor pathname
+  --with-cc-opt=OPTIONS              set additional C compiler options
+  --with-ld-opt=OPTIONS              set additional linker options
+  --with-cpu-opt=CPU                 build for the specified CPU, valid values:
+                                     pentium, pentiumpro, pentium3, pentium4,
+                                     athlon, opteron, sparc32, sparc64, ppc64
+
+END
+
+    exit 1
+fi
+
+if [ ".$OC_PLATFORM" = ".win32" ]; then
+    OC_WINE=$WINE
+fi
+
+
+OC_CONF_PATH=${OC_CONF_PATH:-conf/octopoda.conf}
+OC_CONF_PREFIX=`dirname $OC_CONF_PATH`
+OC_PID_PATH=${OC_PID_PATH:-logs/octopoda.pid}
+OC_LOCK_PATH=${OC_LOCK_PATH:-logs/octopoda.lock}
+
+if [ ".$OC_ERROR_LOG_PATH" = ".stderr" ]; then
+    OC_ERROR_LOG_PATH=
+else
+    OC_ERROR_LOG_PATH=${OC_ERROR_LOG_PATH:-logs/error.log}
+fi
+

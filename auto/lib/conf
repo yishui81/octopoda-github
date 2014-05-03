@@ -1,0 +1,47 @@
+
+# Copyright (C) Igor Sysoev
+# Copyright (C) Nginx, Inc.
+
+
+if [ $USE_OPENSSL = YES ]; then
+    . auto/lib/openssl/conf
+fi
+
+if [ $USE_MD5 = YES ]; then
+
+    if [ $USE_OPENSSL = YES ]; then
+        have=OC_HAVE_OPENSSL_MD5_H . auto/have
+        have=OC_OPENSSL_MD5 . auto/have
+        have=OC_HAVE_MD5 . auto/have
+        MD5=YES
+        MD5_LIB=OpenSSL
+
+    else
+        . auto/lib/md5/conf
+    fi
+
+fi
+
+if [ $USE_SHA1 = YES ]; then
+
+    if [ $USE_OPENSSL = YES ]; then
+        have=OC_HAVE_OPENSSL_SHA1_H . auto/have
+        have=OC_HAVE_SHA1 . auto/have
+        SHA1=YES
+        SHA1_LIB=OpenSSL
+
+    else
+        . auto/lib/sha1/conf
+    fi
+
+fi
+
+if [ $USE_ZLIB = YES ]; then
+    . auto/lib/zlib/conf
+fi
+
+if [ $USE_ARE = YES ]; then
+    . auto/lib/zlib/conf
+fi
+
+

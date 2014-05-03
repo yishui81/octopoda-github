@@ -1,0 +1,61 @@
+
+# Copyright (C) Igor Sysoev
+# Copyright (C) Nginx, Inc.
+
+
+echo
+echo "Configuration summary"
+
+
+
+case $OPENSSL in
+    YES)   echo "  + using system OpenSSL library" ;;
+    NONE)  echo "  + OpenSSL library is not used" ;;
+    *)     echo "  + using OpenSSL library: $OPENSSL" ;;
+esac
+
+case $MD5 in
+    YES)   echo "  + md5: using $MD5_LIB library" ;;
+    NONE)  echo "  + md5 library is not used" ;;
+    NO)    echo "  + using builtin md5 code" ;;
+    *)     echo "  + using md5 library: $MD5" ;;
+esac
+
+case $SHA1 in
+    YES)   echo "  + sha1: using $SHA1_LIB library" ;;
+    NONE)  echo "  + sha1 library is not used" ;;
+    NO)    echo "  + sha1 library is not found" ;;
+    *)     echo "  + using sha1 library: $SHA1" ;;
+esac
+
+case $ZLIB in
+    YES)   echo "  + using system zlib library" ;;
+    NONE)  echo "  + zlib library is not used" ;;
+    *)     echo "  + using zlib library: $ZLIB" ;;
+esac
+
+
+echo
+
+
+cat << END
+  octopoda path prefix: "$OC_PREFIX"
+  octopoda binary file: "$OC_SBIN_PATH"
+  octopoda configuration prefix: "$OC_CONF_PREFIX"
+  octopoda configuration file: "$OC_CONF_PATH"
+  octopoda pid file: "$OC_PID_PATH"
+END
+
+if test -n "$OC_ERROR_LOG_PATH"; then
+    echo "  octopoda error log file: \"$OC_ERROR_LOG_PATH\""
+else
+    echo "  octopoda logs errors to stderr"
+fi
+
+cat << END
+  octopoda http access log file: "$OC_HTTP_LOG_PATH"
+  octopoda http client request body temporary files: "$OC_HTTP_CLIENT_TEMP_PATH"
+END
+
+
+echo "$OC_POST_CONF_MSG"

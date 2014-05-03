@@ -1,0 +1,29 @@
+
+# Copyright (C) Igor Sysoev
+# Copyright (C) Nginx, Inc.
+
+
+if [ "$OC_PLATFORM" != win32 ]; then
+
+    oc_feature="C++ compiler"
+    oc_feature_name=
+    oc_feature_run=yes
+    oc_feature_incs=
+    oc_feature_path=
+    oc_feature_libs=
+    oc_feature_test=
+    . auto/feature
+
+    if [ $oc_found = no ]; then
+        echo
+        echo $0: error: C++ compiler $CC is not found
+        echo
+        exit 1
+    fi
+
+fi
+
+
+
+OC_CC_NAME=gcc
+echo " + using GNU C++ compiler"

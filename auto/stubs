@@ -1,0 +1,8 @@
+
+# Copyright (C) Igor Sysoev
+# Copyright (C) Nginx, Inc.
+
+
+have=OC_SUPPRESS_WARN . auto/have
+
+have=OC_SMP . auto/have

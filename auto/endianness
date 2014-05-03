@@ -1,0 +1,37 @@
+
+# Copyright (C) Jacky Wang
+
+
+echo $oc_n "checking for system byte ordering ...$oc_c"
+echo >> $OC_ERR
+echo "checking for system byte ordering" >> $OC_ERR
+
+
+cat << END > $OC_AUTOTEST.cpp
+
+int main() {
+    int i = 0x11223344;
+    char *p;
+
+    p = (char *) &i;
+    if (*p == 0x44) return 0;
+    return 1;
+}
+
+END
+
+oc_test="$CC $CC_TEST_FLAGS $CC_AUX_FLAGS \
+          -o $OC_AUTOTEST $OC_AUTOTEST.cpp $OC_LD_OPT $oc_feature_libs"
+
+eval "$oc_test >> $OC_AUTOCONF_ERR 2>&1"
+
+if [ -x $OC_AUTOTEST ]; then
+    if $OC_AUTOTEST >/dev/null 2>&1; then
+        echo " little endian"
+        have=OC_HAVE_LITTLE_ENDIAN . auto/have
+    else
+        echo " big endian"
+    fi
+
+    rm $OC_AUTOTEST*
+fi

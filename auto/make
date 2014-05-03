@@ -1,0 +1,411 @@
+
+# Copyright (C) Igor Sysoev
+# Copyright (C) Nginx, Inc.
+
+
+echo "creating $OC_MAKEFILE"
+
+mkdir -p $OC_OBJS/src/core $OC_OBJS/src/event $OC_OBJS/src/event/modules \
+         $OC_OBJS/src/os/unix $OC_OBJS/src/os/win32 \
+         $OC_OBJS/src/http $OC_OBJS/src/http/modules \
+	 		$OC_OBJS/src/http/modules/perl \
+	 	 	$OC_OBJS/src/http/modules/lua \
+         $OC_OBJS/src/mail \
+         $OC_OBJS/src/misc
+
+
+oc_objs_dir=$OC_OBJS$oc_regex_dirsep
+oc_use_pch=`echo $OC_USE_PCH | sed -e "s/\//$OC_regex_dirsep/g"`
+
+cat << END                                                     > $OC_MAKEFILE
+
+CC =	$CC
+CFLAGS = $CFLAGS
+CPP =	$CPP
+LINK =	$LINK
+
+END
+
+
+# ALL_INCS, required by the addons and by OpenWatcom C precompiled headers
+
+oc_incs=`echo $CORE_INCS $OC_OBJS \
+    | sed -e "s/  *\([^ ][^ ]*\)/$oc_regex_cont$oc_include_opt\1/g" \
+          -e "s/\//$oc_regex_dirsep/g"`
+
+cat << END                                                    >> $OC_MAKEFILE
+
+ALL_INCS = $oc_include_opt$oc_incs
+
+END
+
+
+oc_all_srcs="$CORE_SRCS"
+
+
+# the core dependences and include paths
+
+oc_deps=`echo $CORE_DEPS $OC_AUTO_CONFIG_H $OC_PCH \
+    | sed -e "s/  *\([^ ][^ ]*\)/$oc_regex_cont\1/g" \
+          -e "s/\//$oc_regex_dirsep/g"`
+
+oc_incs=`echo $CORE_INCS $OC_OBJS \
+    | sed -e "s/  *\([^ ][^ ]*\)/$oc_regex_cont$oc_include_opt\1/g" \
+          -e "s/\//$oc_regex_dirsep/g"`
+
+cat << END                                                    >> $OC_MAKEFILE
+
+CORE_DEPS = $oc_deps
+
+
+CORE_INCS = $oc_include_opt$oc_incs
+
+END
+
+
+# the http dependences and include paths
+
+if [ $HTTP = YES ]; then
+
+    oc_all_srcs="$oc_all_srcs $HTTP_SRCS"
+
+    oc_deps=`echo $HTTP_DEPS \
+        | sed -e "s/  *\([^ ][^ ]*\)/$oc_regex_cont\1/g" \
+              -e "s/\//$oc_regex_dirsep/g"`
+
+    oc_incs=`echo $HTTP_INCS \
+        | sed -e "s/  *\([^ ][^ ]*\)/$oc_regex_cont$oc_include_opt\1/g" \
+              -e "s/\//$oc_regex_dirsep/g"`
+
+    cat << END                                                >> $OC_MAKEFILE
+
+HTTP_DEPS = $oc_deps
+
+
+HTTP_INCS = $oc_include_opt$oc_incs
+
+END
+
+fi
+
+
+# the mail dependences and include paths
+
+if [ $MAIL = YES ]; then
+
+    oc_all_srcs="$oc_all_srcs $MAIL_SRCS"
+
+    oc_deps=`echo $MAIL_DEPS \
+        | sed -e "s/  *\([^ ][^ ]*\)/$oc_regex_cont\1/g" \
+              -e "s/\//$oc_regex_dirsep/g"`
+
+    oc_incs=`echo $MAIL_INCS \
+        | sed -e "s/  *\([^ ][^ ]*\)/$oc_regex_cont$oc_include_opt\1/g" \
+              -e "s/\//$oc_regex_dirsep/g"`
+
+    cat << END                                                >> $OC_MAKEFILE
+
+MAIL_DEPS = $oc_deps
+
+
+MAIL_INCS = $oc_include_opt$oc_incs
+
+END
+
+fi
+
+
+oc_all_srcs="$oc_all_srcs $OC_MISC_SRCS"
+
+
+if test -n "$OC_ADDON_SRCS"; then
+
+cat << END                                                >> $OC_MAKEFILE
+
+ADDON_DEPS = \$(CORE_DEPS) $OC_ADDON_DEPS
+
+END
+
+fi
+
+
+# octopoda
+
+oc_all_srcs=`echo $oc_all_srcs | sed -e "s/\//$oc_regex_dirsep/g"`
+
+for oc_src in $OC_ADDON_SRCS
+do
+    oc_obj="addon/`basename \`dirname $oc_src\``"
+
+    test -d $OC_OBJS/$oc_obj || mkdir -p $OC_OBJS/$oc_obj
+
+    oc_obj=`echo $oc_obj/\`basename $oc_src\` \
+        | sed -e "s/\//$oc_regex_dirsep/g"`
+
+    oc_all_srcs="$oc_all_srcs $oc_obj"
+done
+
+oc_all_objs=`echo $oc_all_srcs \
+    | sed -e "s#\([^ ]*\.\)cpp#$OC_OBJS\/\1$oc_objext#g" \
+          -e "s#\([^ ]*\.\)cc#$OC_OBJS\/\1$oc_objext#g" \
+          -e "s#\([^ ]*\.\)c#$OC_OBJS\/\1$oc_objext#g" \
+          -e "s#\([^ ]*\.\)S#$OC_OBJS\/\1$oc_objext#g"`
+
+oc_modules_c=`echo $OC_MODULES_C | sed -e "s/\//$oc_regex_dirsep/g"`
+
+oc_modules_obj=`echo $oc_modules_c | sed -e "s/\(.*\.\)c/\1$oc_objext/"`
+
+
+if test -n "$OC_RES"; then
+   oc_res=$OC_RES
+else
+   oc_res="$OC_RC $OC_ICONS"
+   oc_rcc=`echo $OC_RCC | sed -e "s/\//$oc_regex_dirsep/g"`
+fi
+
+oc_deps=`echo $oc_all_objs $oc_modules_obj $oc_res $LINK_DEPS \
+    | sed -e "s/  *\([^ ][^ ]*\)/$oc_regex_cont\1/g" \
+          -e "s/\//$oc_regex_dirsep/g"`
+
+oc_objs=`echo $oc_all_objs $oc_modules_obj \
+    | sed -e "s/  *\([^ ][^ ]*\)/$oc_long_regex_cont\1/g" \
+          -e "s/\//$oc_regex_dirsep/g"`
+
+if test -n "$OC_LD_OPT$CORE_LIBS"; then
+    oc_libs=`echo $OC_LD_OPT $CORE_LIBS \
+        | sed -e "s/\//$oc_regex_dirsep/g" -e "s/^/$oc_long_regex_cont/"`
+fi
+
+oc_link=${CORE_LINK:+`echo $CORE_LINK \
+    | sed -e "s/\//$oc_regex_dirsep/g" -e "s/^/$oc_long_regex_cont/"`}
+
+
+cat << END                                                    >> $OC_MAKEFILE
+
+$OC_OBJS${oc_dirsep}octopoda${oc_binext}:	$oc_deps$oc_spacer
+	\$(LINK) ${oc_long_start}${oc_binout}$OC_OBJS${oc_dirsep}octopoda$oc_long_cont$oc_objs$oc_libs$oc_link
+	$oc_rcc
+${oc_long_end}
+END
+
+
+# oc_modules.c
+
+if test -n "$OC_PCH"; then
+    oc_cc="\$(CC) $oc_compile_opt \$(CFLAGS) $oc_use_pch \$(ALL_INCS)"
+else
+    oc_cc="\$(CC) $oc_compile_opt \$(CFLAGS) \$(CORE_INCS)"
+fi
+
+cat << END                                                    >> $OC_MAKEFILE
+
+$oc_modules_obj:	\$(CORE_DEPS)$oc_cont$oc_modules_c
+	$oc_cc$oc_tab$oc_objout$oc_modules_obj$oc_tab$oc_modules_c$OC_AUX
+
+END
+
+
+# the core sources
+
+for oc_src in $CORE_SRCS
+do
+    oc_src=`echo $oc_src | sed -e "s/\//$oc_regex_dirsep/g"`
+    oc_obj=`echo $oc_src \
+        | sed -e "s#^\(.*\.\)cpp\\$#$oc_objs_dir\1$oc_objext#g" \
+              -e "s#^\(.*\.\)cc\\$#$oc_objs_dir\1$oc_objext#g" \
+              -e "s#^\(.*\.\)c\\$#$oc_objs_dir\1$oc_objext#g" \
+              -e "s#^\(.*\.\)S\\$#$oc_objs_dir\1$oc_objext#g"`
+
+    cat << END                                                >> $OC_MAKEFILE
+
+$oc_obj:	\$(CORE_DEPS)$oc_cont$oc_src
+	$oc_cc$oc_tab$oc_objout$oc_obj$oc_tab$oc_src$OC_AUX
+
+END
+
+done
+
+
+# the http sources
+
+if [ $HTTP = YES ]; then
+
+    if test -n "$OC_PCH"; then
+        oc_cc="\$(CC) $oc_compile_opt \$(CFLAGS) $oc_use_pch \$(ALL_INCS)"
+    else
+        oc_cc="\$(CC) $oc_compile_opt \$(CFLAGS) \$(CORE_INCS) \$(HTTP_INCS)"
+        oc_perl_cc="\$(CC) $oc_compile_opt \$(OC_PERL_CFLAGS) "
+        oc_perl_cc="$oc_perl_cc \$(CORE_INCS) \$(HTTP_INCS)"
+    fi
+
+    for oc_source in $HTTP_SRCS
+    do
+        oc_src=`echo $oc_source | sed -e "s/\//$oc_regex_dirsep/g"`
+        oc_obj=`echo $oc_src \
+            | sed -e "s#^\(.*\.\)cpp\\$#$oc_objs_dir\1$oc_objext#g" \
+                  -e "s#^\(.*\.\)cc\\$#$oc_objs_dir\1$oc_objext#g" \
+                  -e "s#^\(.*\.\)c\\$#$oc_objs_dir\1$oc_objext#g" \
+                  -e "s#^\(.*\.\)S\\$#$oc_objs_dir\1$oc_objext#g"`
+
+        if [ $oc_source = src/http/modules/perl/oc_http_perl_module.c ]; then
+
+            cat << END                                        >> $OC_MAKEFILE
+
+$oc_obj:	\$(CORE_DEPS) \$(HTTP_DEPS)$oc_cont$oc_src
+	$oc_perl_cc$oc_tab$oc_objout$oc_obj$oc_tab$oc_src$OC_AUX
+
+END
+        else
+
+            cat << END                                        >> $OC_MAKEFILE
+
+$oc_obj:	\$(CORE_DEPS) \$(HTTP_DEPS)$oc_cont$oc_src
+	$oc_cc$oc_tab$oc_objout$oc_obj$oc_tab$oc_src$OC_AUX
+
+END
+
+        fi
+     done
+
+fi
+
+
+# the mail sources
+
+if [ $MAIL = YES ]; then
+
+    if test -n "$OC_PCH"; then
+        oc_cc="\$(CC) $oc_compile_opt \$(CFLAGS) $oc_use_pch \$(ALL_INCS)"
+    else
+        oc_cc="\$(CC) $oc_compile_opt \$(CFLAGS) \$(CORE_INCS) \$(MAIL_INCS)"
+    fi
+
+    for oc_src in $MAIL_SRCS
+    do
+        oc_src=`echo $oc_src | sed -e "s/\//$oc_regex_dirsep/g"`
+        oc_obj=`echo $oc_src \
+            | sed -e "s#^\(.*\.\)cpp\\$#$oc_objs_dir\1$oc_objext#g" \
+                  -e "s#^\(.*\.\)cc\\$#$oc_objs_dir\1$oc_objext#g" \
+                  -e "s#^\(.*\.\)c\\$#$oc_objs_dir\1$oc_objext#g" \
+                  -e "s#^\(.*\.\)S\\$#$oc_objs_dir\1$oc_objext#g"`
+
+        cat << END                                            >> $OC_MAKEFILE
+
+$oc_obj:	\$(CORE_DEPS) \$(MAIL_DEPS)$oc_cont$oc_src
+	$oc_cc$oc_tab$oc_objout$oc_obj$oc_tab$oc_src$OC_AUX
+
+END
+     done
+
+fi
+
+
+# the misc sources
+
+if test -n "$OC_MISC_SRCS"; then
+
+    oc_cc="\$(CC) $oc_compile_opt \$(CFLAGS) $oc_use_pch \$(ALL_INCS)"
+
+    for oc_src in $OC_MISC_SRCS
+    do
+        oc_src=`echo $oc_src | sed -e "s/\//$oc_regex_dirsep/g"`
+        oc_obj=`echo $oc_src \
+            | sed -e "s#^\(.*\.\)cpp\\$#$oc_objs_dir\1$oc_objext#g" \
+                  -e "s#^\(.*\.\)cc\\$#$oc_objs_dir\1$oc_objext#g" \
+                  -e "s#^\(.*\.\)c\\$#$oc_objs_dir\1$oc_objext#g" \
+                  -e "s#^\(.*\.\)S\\$#$oc_objs_dir\1$oc_objext#g"`
+
+        cat << END                                            >> $OC_MAKEFILE
+
+$oc_obj:	\$(CORE_DEPS) $oc_cont$oc_src
+	$oc_cc$oc_tab$oc_objout$oc_obj$oc_tab$oc_src$OC_AUX
+
+END
+     done
+
+fi
+
+
+# the addons sources
+
+if test -n "$OC_ADDON_SRCS"; then
+
+    oc_cc="\$(CC) $oc_compile_opt \$(CFLAGS) $oc_use_pch \$(ALL_INCS)"
+
+    for oc_src in $OC_ADDON_SRCS
+    do
+        oc_obj="addon/`basename \`dirname $oc_src\``"
+
+        oc_obj=`echo $oc_obj/\`basename $oc_src\` \
+            | sed -e "s/\//$oc_regex_dirsep/g"`
+
+        oc_obj=`echo $oc_obj \
+            | sed -e "s#^\(.*\.\)cpp\\$#$oc_objs_dir\1$oc_objext#g" \
+                  -e "s#^\(.*\.\)cc\\$#$oc_objs_dir\1$oc_objext#g" \
+                  -e "s#^\(.*\.\)c\\$#$oc_objs_dir\1$oc_objext#g" \
+                  -e "s#^\(.*\.\)S\\$#$oc_objs_dir\1$oc_objext#g"`
+
+        oc_src=`echo $oc_src | sed -e "s/\//$oc_regex_dirsep/g"`
+
+        cat << END                                            >> $OC_MAKEFILE
+
+$oc_obj:	\$(ADDON_DEPS)$oc_cont$oc_src
+	$oc_cc$oc_tab$oc_objout$oc_obj$oc_tab$oc_src$OC_AUX
+
+END
+     done
+
+fi
+
+
+# the addons config.make
+
+if test -n "$OC_ADDONS"; then
+
+    for oc_addon_dir in $OC_ADDONS
+    do
+        if test -f $oc_addon_dir/config.make; then
+            . $oc_addon_dir/config.make
+        fi
+    done
+fi
+
+
+# Win32 resource file
+
+if test -n "$OC_RES"; then
+
+    oc_res=`echo "$OC_RES:	$OC_RC $OC_ICONS" \
+                 | sed -e "s/\//$oc_regex_dirsep/g"`
+    oc_rcc=`echo $OC_RCC | sed -e "s/\//$oc_regex_dirsep/g"`
+
+    cat << END                                                >> $OC_MAKEFILE
+
+$oc_res
+	$oc_rcc
+
+END
+
+fi
+
+
+# the precompiled headers
+
+if test -n "$OC_PCH"; then
+    echo "#include <oc_config.h>" > $OC_OBJS/oc_pch.c
+
+    oc_pch="src/core/oc_config.h $OS_CONFIG $OC_OBJS/oc_auto_config.h"
+    oc_pch=`echo "$OC_PCH:	$oc_pch" | sed -e "s/\//$oc_regex_dirsep/g"`
+
+    oc_src="\$(CC) \$(CFLAGS) $OC_BUILD_PCH $oc_compile_opt \$(ALL_INCS)"
+    oc_src="$oc_src $oc_objout$OC_OBJS/oc_pch.obj $OC_OBJS/oc_pch.c"
+    oc_src=`echo $oc_src | sed -e "s/\//$oc_regex_dirsep/g"`
+
+    cat << END                                                >> $OC_MAKEFILE
+
+$oc_pch
+	$oc_src
+
+END
+
+fi

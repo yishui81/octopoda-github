@@ -1,0 +1,18 @@
+
+Changes with uce 4.1.1.1                                    15 July 2013
+
+    *) Feature: "proxy_consistent_hash" directive.  hash request_url to 
+	determine which proxy_cache to service for the url. So far, it is 
+	not consistent hash,however, it will be changed.
+
+    *) Change: file name's format  in "proxy_store" xx/yy/md5_crc
+
+    *) Feature: "consistent_hash $request_uri" directive. It supports 
+       consistent hash request uri  to determine which upstream server 
+       will be served.
+
+    *) Feature: health check upstream servers  
+
+
+
+

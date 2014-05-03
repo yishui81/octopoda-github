@@ -1,0 +1,12 @@
+
+# Copyright (C) Igor Sysoev
+# Copyright (C) Nginx, Inc.
+
+
+cat << END >> $OC_AUTO_CONFIG_H
+
+#ifndef $oc_param
+#define $oc_param  $oc_value
+#endif
+
+END

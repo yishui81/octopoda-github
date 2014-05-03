@@ -1,0 +1,104 @@
+#!/bin/sh
+
+# Copyright (C) Jacky Wang
+
+
+LC_ALL=C
+export LC_ALL
+
+. auto/options
+. auto/init
+. auto/sources
+
+
+
+test -d $OC_OBJS || mkdir $OC_OBJS
+
+echo > $OC_AUTO_HEADERS_H
+echo > $OC_AUTOCONF_ERR
+
+echo "#define OC_CONFIGURE \"$OC_CONFIGURE\"" > $OC_AUTO_CONFIG_H
+
+
+if [ $OC_DEBUG = YES ]; then
+    have=OC_DEBUG . auto/have
+fi
+
+if test -z "$OC_PLATFORM"; then
+    echo "checking for OS"
+
+    OC_SYSTEM=`uname -s 2>/dev/null`
+    OC_RELEASE=`uname -r 2>/dev/null`
+    OC_MACHINE=`uname -m 2>/dev/null`
+
+    echo " + $OC_SYSTEM $OC_RELEASE $OC_MACHINE"
+
+    OC_PLATFORM="$OC_SYSTEM:$OC_RELEASE:$OC_MACHINE";
+
+    case "$OC_SYSTEM" in
+        MINGW32_*)
+            OC_PLATFORM=win32
+        ;;
+    esac
+
+else
+    echo "building for $OC_PLATFORM"
+    OC_SYSTEM=$OC_PLATFORM
+fi
+
+. auto/cc/conf
+
+if [ "$OC_PLATFORM" != win32 ]; then
+    . auto/headers
+fi
+
+. auto/os/conf
+
+if [ "$OC_PLATFORM" != win32 ]; then
+    . auto/unix
+fi
+
+. auto/modules
+. auto/lib/conf
+
+case ".$OC_PREFIX" in
+    .)
+        OC_PREFIX=${OC_PREFIX:-/opt/octopoda}
+        have=OC_PREFIX value="\"$OC_PREFIX/\"" . auto/define
+    ;;
+
+    .!)
+        OC_PREFIX=
+    ;;
+
+    *)
+        have=OC_PREFIX value="\"$OC_PREFIX/\"" . auto/define
+    ;;
+esac
+
+if [ ".$OC_CONF_PREFIX" != "." ]; then
+    have=OC_CONF_PREFIX value="\"$OC_CONF_PREFIX/\"" . auto/define
+fi
+
+have=OC_SBIN_PATH value="\"$OC_SBIN_PATH\"" . auto/define
+have=OC_CONF_PATH value="\"$OC_CONF_PATH\"" . auto/define
+have=OC_PID_PATH value="\"$OC_PID_PATH\"" . auto/define
+have=OC_LOCK_PATH value="\"$OC_LOCK_PATH\"" . auto/define
+have=OC_ERROR_LOG_PATH value="\"$OC_ERROR_LOG_PATH\"" . auto/define
+
+have=OC_HTTP_LOG_PATH value="\"$OC_HTTP_LOG_PATH\"" . auto/define
+have=OC_HTTP_CLIENT_TEMP_PATH value="\"$OC_HTTP_CLIENT_TEMP_PATH\""
+. auto/define
+
+. auto/make
+. auto/lib/make
+. auto/install
+
+# STUB
+. auto/stubs
+
+have=OC_USER value="\"$OC_USER\"" . auto/define
+have=OC_GROUP value="\"$OC_GROUP\"" . auto/define
+have=OC_PROCESS_NAME value="\"$OC_PROCESS_NAME\"" . auto/define
+
+. auto/summary

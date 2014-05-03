@@ -1,0 +1,153 @@
+
+# Copyright (C) Igor Sysoev
+# Copyright (C) Nginx, Inc.
+
+
+have=OC_LINUX . auto/have_headers
+
+CORE_INCS="$UNIX_INCS"
+CORE_DEPS="$UNIX_DEPS $LINUX_DEPS"
+CORE_SRCS="$UNIX_SRCS $LINUX_SRCS"
+
+oc_spacer='
+'
+
+cc_aux_flags="$CC_AUX_FLAGS"
+CC_AUX_FLAGS="$cc_aux_flags -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64"
+
+
+# Linux kernel version
+
+version=$((`uname -r \
+    | sed -n -e 's/^\([0-9][0-9]*\)\.\([0-9][0-9]*\)\.\([0-9][0-9]*\).*/ \
+                                                 \1*256*256+\2*256+\3/p' \
+             -e 's/^\([0-9][0-9]*\)\.\([0-9][0-9]*\).*/\1*256*256+\2*256/p'`))
+
+version=${version:-0}
+
+
+# enable the rt signals on Linux between 2.2.19 and 2.6.17
+
+if [ \( $version -ge 131603 -a $version -lt 132626 \) -o $EVENT_RTSIG = YES ]
+then
+    echo " + rt signals found"
+    have=OC_HAVE_RTSIG . auto/have
+    EVENT_MODULES="$EVENT_MODULES $RTSIG_MODULE"
+    CORE_SRCS="$CORE_SRCS $RTSIG_SRCS"
+    EVENT_FOUND=YES
+fi
+
+
+# posix_fadvise64() had been implemented in 2.5.60
+
+if [ $version -lt 132412 ]; then
+    have=OC_HAVE_POSIX_FADVISE . auto/nohave
+fi
+
+# epoll, EPOLLET version
+
+oc_feature="epoll"
+oc_feature_name="OC_HAVE_EPOLL"
+oc_feature_run=yes
+oc_feature_incs="#include <sys/epoll.h>"
+oc_feature_path=
+oc_feature_libs=
+oc_feature_test="int efd = 0;
+                  struct epoll_event ee;
+                  ee.events = EPOLLIN|EPOLLOUT|EPOLLET;
+                  ee.data.ptr = NULL;
+                  efd = epoll_create(100);
+                  if (efd == -1) return 1;"
+. auto/feature
+
+if [ $oc_found = yes ]; then
+    have=OC_HAVE_CLEAR_EVENT . auto/have
+    CORE_SRCS="$CORE_SRCS $EPOLL_SRCS"
+    EVENT_MODULES="$EVENT_MODULES $EPOLL_MODULE"
+    EVENT_FOUND=YES
+fi
+
+
+# sendfile()
+
+CC_AUX_FLAGS="$cc_aux_flags -D_GNU_SOURCE"
+oc_feature="sendfile()"
+oc_feature_name="OC_HAVE_SENDFILE"
+oc_feature_run=yes
+oc_feature_incs="#include <sys/sendfile.h>
+                  #include <errno.h>"
+oc_feature_path=
+oc_feature_libs=
+oc_feature_test="int s = 0, fd = 1;
+                  ssize_t n; off_t off = 0;
+                  n = sendfile(s, fd, &off, 1);
+                  if (n == -1 && errno == ENOSYS) return 1"
+. auto/feature
+
+if [ $oc_found = yes ]; then
+    CORE_SRCS="$CORE_SRCS $LINUX_SENDFILE_SRCS"
+fi
+
+
+# sendfile64()
+
+CC_AUX_FLAGS="$cc_aux_flags -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64"
+oc_feature="sendfile64()"
+oc_feature_name="OC_HAVE_SENDFILE64"
+oc_feature_run=yes
+oc_feature_incs="#include <sys/sendfile.h>
+                  #include <errno.h>"
+oc_feature_path=
+oc_feature_libs=
+oc_feature_test="int s = 0, fd = 1;
+                  ssize_t n; off_t off = 0;
+                  n = sendfile(s, fd, &off, 1);
+                  if (n == -1 && errno == ENOSYS) return 1"
+. auto/feature
+
+
+oc_include="sys/prctl.h"; . auto/include
+
+# prctl(PR_SET_DUMPABLE)
+
+oc_feature="prctl(PR_SET_DUMPABLE)"
+oc_feature_name="OC_HAVE_PR_SET_DUMPABLE"
+oc_feature_run=yes
+oc_feature_incs="#include <sys/prctl.h>"
+oc_feature_path=
+oc_feature_libs=
+oc_feature_test="if (prctl(PR_SET_DUMPABLE, 1, 0, 0, 0) == -1) return 1"
+. auto/feature
+
+
+# sched_setaffinity()
+
+oc_feature="sched_setaffinity()"
+oc_feature_name="OC_HAVE_SCHED_SETAFFINITY"
+oc_feature_run=no
+oc_feature_incs="#include <sched.h>"
+oc_feature_path=
+oc_feature_libs=
+oc_feature_test="cpu_set_t mask;
+                  CPU_ZERO(&mask);
+                  sched_setaffinity(0, sizeof(cpu_set_t), &mask)"
+. auto/feature
+
+
+# crypt_r()
+
+oc_feature="crypt_r()"
+oc_feature_name="OC_HAVE_GNU_CRYPT_R"
+oc_feature_run=no
+oc_feature_incs="#include <crypt.h>"
+oc_feature_path=
+oc_feature_libs=-lcrypt
+oc_feature_test="struct crypt_data  cd;
+                  crypt_r(\"key\", \"salt\", &cd);"
+. auto/feature
+
+
+oc_include="sys/vfs.h";     . auto/include
+
+
+CC_AUX_FLAGS="$cc_aux_flags -D_GNU_SOURCE -D_FILE_OFFSET_BITS=64"

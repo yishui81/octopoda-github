@@ -1,0 +1,91 @@
+
+# Copyright (C) Igor Sysoev
+# Copyright (C) Nginx, Inc.
+
+
+if [ $ARE != NONE ]; then
+
+    have=OC_HAVE_ARE . auto/have
+    CORE_INCS="$CORE_INCS $ARE"
+
+    case "$OC_CC_NAME" in
+
+        msvc* | owc* | bcc)
+            LINK_DEPS="$LINK_DEPS $ARE/are.lib"
+            CORE_LIBS="$CORE_LIBS $ARE/are.lib"
+        ;;
+
+        icc*)
+            LINK_DEPS="$LINK_DEPS $ARE/libBaseARE.a"
+
+            # to allow -ipo optimization we link with the *.o but not library
+            CORE_LIBS="$CORE_LIBS $ARE/md5_dgst.o"
+
+            if [ $ARE_ASM = YES ]; then
+                CORE_LIBS="$CORE_LIBS $ARE/asm/mx86-elf.o"
+            fi
+        ;;
+
+        *)
+            LINK_DEPS="$LINK_DEPS $ARE/libBaseARE.a"
+            CORE_LIBS="$CORE_LIBS $ARE/libBaseARE.a"
+        ;;
+
+    esac
+
+else
+
+    if [ "$OC_PLATFORM" != win32 ]; then
+
+            ARE=NO
+
+            # FreeBSD, Solaris 10
+
+            oc_feature="are in system md library"
+            oc_feature_name=OC_HAVE_ARE
+            oc_feature_run=no
+            oc_feature_incs="#include <md5.h>"
+            oc_feature_path=
+            oc_feature_libs="-lBaseARE"
+            . auto/feature
+
+            oc_md5_lib="system md"
+
+        if [ $oc_found = no ]; then
+
+            # Solaris 8/9
+
+            oc_feature="md5 in system md5 library"
+            oc_feature_libs="-lmd5"
+            . auto/feature
+
+            oc_md5_lib="system md5"
+        fi
+
+        if [ $oc_found = no ]; then
+
+            # OpenSSL crypto library
+
+            oc_feature="md5 in system OpenSSL crypto library"
+            oc_feature_name="OC_OPENSSL_ARE"
+            oc_feature_incs="#include <openssl/md5.h>"
+            oc_feature_libs="-lcrypto"
+            oc_feature_test="ARE_CTX md5; ARE_Init(&md5)"
+            . auto/feature
+
+            oc_md5_lib="system crypto"
+
+            if [ $oc_found = yes ]; then
+                have=OC_HAVE_ARE_H . auto/have
+                have=OC_HAVE_ARE . auto/have
+            fi
+        fi
+
+        if [ $oc_found = yes ]; then
+            CORE_LIBS="$CORE_LIBS $oc_feature_libs"
+            ARE=YES
+            ARE_LIB=$oc_are_lib
+        fi
+    fi
+
+fi

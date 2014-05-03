@@ -1,0 +1,79 @@
+
+# Copyright (C) Igor Sysoev
+# Copyright (C) Nginx, Inc.
+
+
+if [ $ZLIB != NONE ]; then
+    CORE_INCS="$CORE_INCS $ZLIB"
+
+    case "$OC_CC_NAME" in
+
+        msvc* | owc* | bcc)
+            have=OC_ZLIB . auto/have
+            LINK_DEPS="$LINK_DEPS $ZLIB/zlib.lib"
+            CORE_LIBS="$CORE_LIBS $ZLIB/zlib.lib"
+        ;;
+
+        icc*)
+            have=OC_ZLIB . auto/have
+            LINK_DEPS="$LINK_DEPS $ZLIB/libz.a"
+
+            # to allow -ipo optimization we link with the *.o but not library
+            CORE_LIBS="$CORE_LIBS $ZLIB/adler32.o"
+            CORE_LIBS="$CORE_LIBS $ZLIB/crc32.o"
+            CORE_LIBS="$CORE_LIBS $ZLIB/deflate.o"
+            CORE_LIBS="$CORE_LIBS $ZLIB/trees.o"
+            CORE_LIBS="$CORE_LIBS $ZLIB/zutil.o"
+            CORE_LIBS="$CORE_LIBS $ZLIB/compress.o"
+
+            if [ $ZLIB_ASM != NO ]; then
+                CORE_LIBS="$CORE_LIBS $ZLIB/match.o"
+            fi
+        ;;
+
+        *)
+            have=OC_ZLIB . auto/have
+            LINK_DEPS="$LINK_DEPS $ZLIB/libz.a"
+            CORE_LIBS="$CORE_LIBS $ZLIB/libz.a"
+            #CORE_LIBS="$CORE_LIBS -L $ZLIB -lz"
+        ;;
+
+    esac
+
+else
+
+    if [ "$OC_PLATFORM" != win32 ]; then
+        ZLIB=NO
+
+        # FreeBSD, Solaris, Linux
+
+        oc_feature="zlib library"
+        oc_feature_name="OC_ZLIB"
+        oc_feature_run=no
+        oc_feature_incs="#include <zlib.h>"
+        oc_feature_path=
+        oc_feature_libs="-lz"
+        oc_feature_test="z_stream z; deflate(&z, Z_NO_FLUSH)"
+        . auto/feature
+
+
+        if [ $oc_found = yes ]; then
+            CORE_LIBS="$CORE_LIBS $oc_feature_libs"
+            ZLIB=YES
+            oc_found=no
+        fi
+    fi
+
+    if [ $ZLIB != YES ]; then
+cat << END
+
+$0: error: the HTTP gzip module requires the zlib library.
+You can either disable the module by using --without-http_gzip_module
+option, or install the zlib library into the system, or build the zlib library
+statically from the source with octopoda by using --with-zlib=<path> option.
+
+END
+        exit 1
+    fi
+
+fi

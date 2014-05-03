@@ -1,0 +1,40 @@
+
+# Copyright (C) Igor Sysoev
+# Copyright (C) Nginx, Inc.
+
+
+echo $oc_n "checking for $oc_lib ...$oc_c"
+
+cat << END >> $OC_AUTOCONF_ERR
+
+----------------------------------------
+checking for $oc_lib
+
+END
+
+oc_found=no
+
+cat << END > $OC_AUTOTEST.cpp
+
+$oc_lib_incs
+
+int main() {
+    $oc_lib_test;
+    return 0;
+}
+
+
+eval "$CC $cc_test_flags $oc_lib_cflags \
+     -o $OC_AUTOTEST $OC_AUTOTEST.cpp $oc_libs \
+     >> $OC_ERR 2>&1"
+
+if [ -x $OC_AUTOTEST ]; then
+    echo " found"
+
+    oc_found=yes
+
+else
+    echo " not found"
+fi
+
+rm $OC_AUTOTEST*

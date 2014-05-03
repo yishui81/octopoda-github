@@ -1,0 +1,123 @@
+
+# Copyright (C) Igor Sysoev
+# Copyright (C) Nginx, Inc.
+
+
+LINK="\$(CC)"
+
+oc_include_opt="-I "
+oc_compile_opt="-c"
+oc_objout="-o "
+oc_binout="-o "
+oc_objext="o"
+oc_binext=
+
+oc_long_start=
+oc_long_end=
+
+oc_regex_dirsep="\/"
+oc_dirsep='/'
+
+oc_regex_cont=' \\\
+	'
+oc_cont=' \
+	'
+oc_tab=' \
+		'
+oc_spacer=
+
+oc_long_regex_cont=$oc_regex_cont
+oc_long_cont=$oc_cont
+
+. auto/cc/name
+
+if test -n "$CFLAGS"; then
+
+    CC_TEST_FLAGS="$CFLAGS $OC_CC_OPT"
+
+else
+
+    case $OC_CC_NAME in
+        gcc)
+            # gcc 2.7.2.3, 2.8.1, 2.95.4, egcs-1.1.2
+            #     3.0.4, 3.1.1, 3.2.3, 3.3.2, 3.3.3, 3.3.4, 3.4.0, 3.4.2
+            #     4.0.0, 4.0.1, 4.1.0
+
+            . auto/cc/gcc
+        ;;
+    esac
+
+    CC_TEST_FLAGS="$CC_TEST_FLAGS $OC_CC_OPT"
+
+fi
+
+CFLAGS="$CFLAGS $OC_CC_OPT"
+OC_TEST_LD_OPT="$OC_LD_OPT"
+
+if [ "$OC_PLATFORM" != win32 ]; then
+
+    if test -n "$OC_LD_OPT"; then
+        oc_feature=--with-ld-opt=\"$OC_LD_OPT\"
+        oc_feature_name=
+        oc_feature_run=no
+        oc_feature_incs=
+        oc_feature_path=
+        oc_feature_libs=
+        oc_feature_test=
+        . auto/feature
+
+        if [ $oc_found = no ]; then
+            echo $0: error: the invalid value in --with-ld-opt=\"$OC_LD_OPT\"
+            echo
+            exit 1
+        fi
+    fi
+
+
+    oc_feature="gcc builtin atomic operations"
+    oc_feature_name=OC_HAVE_GCC_ATOMIC
+    oc_feature_run=yes
+    oc_feature_incs=
+    oc_feature_path=
+    oc_feature_libs=
+    oc_feature_test="long  n = 0;
+                      if (!__sync_bool_compare_and_swap(&n, 0, 1))
+                          return 1;
+                      if (__sync_fetch_and_add(&n, 1) != 1)
+                          return 1;
+                      if (n != 2)
+                          return 1;
+                      __sync_synchronize();"
+    . auto/feature
+
+
+    oc_feature="gcc variadic macros"
+    oc_feature_name="OC_HAVE_GCC_VARIADIC_MACROS"
+    oc_feature_run=yes
+    oc_feature_incs="#include <stdio.h>
+#define var(dummy, args...)  sprintf(args)"
+    oc_feature_path=
+    oc_feature_libs=
+    oc_feature_test="char  buf[30]; buf[0] = '0';
+                      var(0, buf, \"%d\", 1);
+                      if (buf[0] != '1') return 1"
+    . auto/feature
+
+     oc_feature="compiler structure-packing pragma"
+     oc_feature_name="OC_HAVE_PACK_PRAGMA"
+     oc_feature_run=yes
+     oc_feature_incs=
+     oc_feature_path=
+     oc_feature_libs=
+     oc_feature_test="#pragma pack(push, 1)
+                       struct test_s {
+                           char foo;
+                           int  bar;
+                       };
+                       #pragma pack(pop)
+ 
+                       if (sizeof(struct test_s) != (sizeof(char) + sizeof(int)))
+                           return 1;"
+     . auto/feature
+
+fi

@@ -1,0 +1,10 @@
+
+# Copyright (C) Jacky Wang
+
+CORE_MODULES="oc_core_module"
+
+CORE_INCS="src/core"
+
+CORE_DEPS="oc_config.h oc_core.h"
+
+CORE_SRCS="src/core/octopoda.cpp"

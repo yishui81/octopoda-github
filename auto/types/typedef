@@ -1,0 +1,77 @@
+
+# Copyright (C) Igor Sysoev
+# Copyright (C) Nginx, Inc.
+
+
+echo $oc_n "checking for $oc_type ...$oc_c"
+
+cat << END >> $OC_AUTOCONF_ERR
+
+----------------------------------------
+checking for $oc_type
+
+END
+
+oc_found=no
+
+for oc_try in $oc_type $oc_types
+do
+
+    cat << END > $OC_AUTOTEST.cpp
+
+#include <sys/types.h>
+#include <signal.h>
+#include <sys/socket.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <netinet/in.h>
+$OC_INCLUDE_INTTYPES_H
+
+int main() {
+    $oc_try i = 0;
+    return (int) i;
+}
+
+END
+
+    oc_test="$CC $CC_TEST_FLAGS $CC_AUX_FLAGS \
+              -o $OC_AUTOTEST $OC_AUTOTEST.cpp $OC_LD_OPT $oc_feature_libs"
+
+    eval "$oc_test >> $OC_AUTOCONF_ERR 2>&1"
+
+    if [ -x $OC_AUTOTEST ]; then
+        if [ $oc_try = $oc_type ]; then
+            echo " found"
+            oc_found=yes
+        else
+            echo ", $oc_try used"
+            oc_found=$oc_try
+        fi
+    fi
+
+    rm -f $OC_AUTOTEST
+
+    if [ $oc_found = no ]; then
+        echo $oc_n " $oc_try not found$oc_c"
+
+        echo "----------"    >> $OC_AUTOCONF_ERR
+        cat $OC_AUTOTEST.cpp  >> $OC_AUTOCONF_ERR
+        echo "----------"    >> $OC_AUTOCONF_ERR
+        echo $oc_test       >> $OC_AUTOCONF_ERR
+        echo "----------"    >> $OC_AUTOCONF_ERR
+
+    else
+        break
+    fi
+done
+
+if [ $oc_found = no ]; then
+    echo
+    echo "$0: error: can not define $oc_type"
+
+    exit 1
+fi
+
+if [ $oc_found != yes ]; then
+    echo "typedef $oc_found  $oc_type;"   >> $OC_AUTO_CONFIG_H
+fi

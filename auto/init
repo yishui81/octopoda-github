@@ -1,0 +1,47 @@
+
+# Copyright (C) Jacky Wang
+OC_MAKEFILE=$OC_OBJS/Makefile
+
+OC_AUTO_HEADERS_H=$OC_OBJS/oc_auto_headers.h
+OC_AUTO_CONFIG_H=$OC_OBJS/oc_auto_config.h
+
+OC_AUTOTEST=$OC_OBJS/autotest
+OC_AUTOCONF_ERR=$OC_OBJS/autoconf.err
+
+# STUBs
+OC_ERR=$OC_OBJS/autoconf.err
+MAKEFILE=$OC_OBJS/Makefile
+
+
+OC_PCH=
+OC_USE_PCH=
+
+
+# check the echo's "-n" option and "\c" capability
+
+if echo "test\cpp" | grep cpp >/dev/null; then
+
+    if echo -n test | grep n >/dev/null; then
+        oc_n=
+        oc_c=
+
+    else
+        oc_n=-n
+        oc_c=
+    fi
+
+else
+    oc_n=
+    oc_c='\cpp'
+fi
+
+
+# create Makefile
+
+cat << END > Makefile
+
+default:	build
+
+clean:
+	rm -rf Makefile $OC_OBJS
+END

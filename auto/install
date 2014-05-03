@@ -1,0 +1,142 @@
+
+# Copyright (C) Jacky Wang
+
+
+
+
+case ".$OC_SBIN_PATH" in
+    ./*)
+    ;;
+
+    .)
+        OC_SBIN_PATH=$OC_PREFIX/sbin/octopoda
+    ;;
+
+    *)
+        OC_SBIN_PATH=$OC_PREFIX/$OC_SBIN_PATH
+    ;;
+esac
+
+
+case ".$OC_CONF_PATH" in
+    ./*)
+    ;;
+
+    *)
+        OC_CONF_PATH=$OC_PREFIX/$OC_CONF_PATH
+    ;;
+esac
+
+
+OC_CONF_PREFIX=`dirname $OC_CONF_PATH`
+
+
+case ".$OC_PID_PATH" in
+    ./*)
+    ;;
+
+    *)
+        OC_PID_PATH=$OC_PREFIX/$OC_PID_PATH
+    ;;
+esac
+
+
+case ".$OC_ERROR_LOG_PATH" in
+    ./* | .)
+    ;;
+
+    *)
+        OC_ERROR_LOG_PATH=$OC_PREFIX/$OC_ERROR_LOG_PATH
+    ;;
+esac
+
+
+case ".$OC_HTTP_LOG_PATH" in
+    ./*)
+    ;;
+
+    *)
+        OC_HTTP_LOG_PATH=$OC_PREFIX/$OC_HTTP_LOG_PATH
+    ;;
+esac
+
+
+cat << END                                                    >> $OC_MAKEFILE
+
+
+install:	$OC_OBJS${oc_dirsep}octopoda${oc_binext} \
+		$OC_INSTALL_PERL_MODULES
+	test -d '\$(DESTDIR)$OC_PREFIX' || mkdir -p '\$(DESTDIR)$OC_PREFIX'
+
+	test -d '\$(DESTDIR)`dirname "$OC_SBIN_PATH"`' \
+		|| mkdir -p '\$(DESTDIR)`dirname "$OC_SBIN_PATH"`'
+	test ! -f '\$(DESTDIR)$OC_SBIN_PATH' \
+		|| mv '\$(DESTDIR)$OC_SBIN_PATH' \
+			'\$(DESTDIR)$OC_SBIN_PATH.old'
+	cp $OC_OBJS/octopoda '\$(DESTDIR)$OC_SBIN_PATH'
+
+	test -d '\$(DESTDIR)$OC_CONF_PREFIX' \
+		|| mkdir -p '\$(DESTDIR)$OC_CONF_PREFIX'
+
+	cp conf/koi-win '\$(DESTDIR)$OC_CONF_PREFIX'
+	cp conf/koi-utf '\$(DESTDIR)$OC_CONF_PREFIX'
+	cp conf/win-utf '\$(DESTDIR)$OC_CONF_PREFIX'
+
+	test -f '\$(DESTDIR)$OC_CONF_PREFIX/mime.types' \
+		|| cp conf/mime.types '\$(DESTDIR)$OC_CONF_PREFIX'
+	cp conf/mime.types '\$(DESTDIR)$OC_CONF_PREFIX/mime.types.default'
+
+	test -f '\$(DESTDIR)$OC_CONF_PREFIX/fastcgi_params' \
+		|| cp conf/fastcgi_params '\$(DESTDIR)$OC_CONF_PREFIX'
+	cp conf/fastcgi_params \
+		'\$(DESTDIR)$OC_CONF_PREFIX/fastcgi_params.default'
+
+	test -f '\$(DESTDIR)$OC_CONF_PREFIX/fastcgi.conf' \
+		|| cp conf/fastcgi.conf '\$(DESTDIR)$OC_CONF_PREFIX'
+	cp conf/fastcgi.conf '\$(DESTDIR)$OC_CONF_PREFIX/fastcgi.conf.default'
+
+	test -f '\$(DESTDIR)$OC_CONF_PREFIX/uwsgi_params' \
+		|| cp conf/uwsgi_params '\$(DESTDIR)$OC_CONF_PREFIX'
+	cp conf/uwsgi_params \
+		'\$(DESTDIR)$OC_CONF_PREFIX/uwsgi_params.default'
+
+	test -f '\$(DESTDIR)$OC_CONF_PREFIX/scgi_params' \
+		|| cp conf/scgi_params '\$(DESTDIR)$OC_CONF_PREFIX'
+	cp conf/scgi_params \
+		'\$(DESTDIR)$OC_CONF_PREFIX/scgi_params.default'
+
+	test -f '\$(DESTDIR)$OC_CONF_PATH' \
+		|| cp conf/octopoda.conf '\$(DESTDIR)$OC_CONF_PATH'
+	cp conf/octopoda.conf '\$(DESTDIR)$OC_CONF_PREFIX/octopoda.conf.default'
+
+	test -d '\$(DESTDIR)`dirname "$OC_PID_PATH"`' \
+		|| mkdir -p '\$(DESTDIR)`dirname "$OC_PID_PATH"`'
+
+	test -d '\$(DESTDIR)`dirname "$OC_HTTP_LOG_PATH"`' || \
+		mkdir -p '\$(DESTDIR)`dirname "$OC_HTTP_LOG_PATH"`'
+
+END
+
+
+if test -n "$OC_ERROR_LOG_PATH"; then
+    cat << END                                                >> $OC_MAKEFILE
+
+	test -d '\$(DESTDIR)`dirname "$OC_ERROR_LOG_PATH"`' || \
+		mkdir -p '\$(DESTDIR)`dirname "$OC_ERROR_LOG_PATH"`'
+END
+
+fi
+
+
+# create Makefile
+
+cat << END >> Makefile
+
+build:
+	\$(MAKE) -f $OC_MAKEFILE
+	\$(MAKE) -f $OC_MAKEFILE manpage
+
+install:
+	\$(MAKE) -f $OC_MAKEFILE install
+
+END

@@ -1,0 +1,122 @@
+
+# Copyright (C) Jacky Wang
+
+
+echo $oc_n "checking for $oc_feature ...$oc_c"
+
+cat << END >> $OC_AUTOCONF_ERR
+
+----------------------------------------
+checking for $oc_feature
+
+END
+
+oc_found=no
+
+if test -n "$oc_feature_name"; then
+    oc_have_feature=`echo $oc_feature_name \
+                   | tr abcdefghijklmnopqrstuvwxyz ABCDEFGHIJKLMNOPQRSTUVWXYZ`
+fi
+
+if test -n "$oc_feature_path"; then
+    for oc_temp in $oc_feature_path; do
+        oc_feature_inc_path="$oc_feature_inc_path -I $oc_temp"
+    done
+fi
+
+cat << END > $OC_AUTOTEST.cpp
+
+#include <sys/types.h>
+$OC_INCLUDE_UNISTD_H
+$oc_feature_incs
+
+int main() {
+    $oc_feature_test;
+    return 0;
+}
+
+END
+
+
+oc_test="$CC $CC_TEST_FLAGS $CC_AUX_FLAGS $oc_feature_inc_path \
+          -o $OC_AUTOTEST $OC_AUTOTEST.cpp $OC_TEST_LD_OPT $oc_feature_libs"
+
+oc_feature_inc_path=
+
+eval "/bin/sh -c \"$oc_test\" >> $OC_AUTOCONF_ERR 2>&1"
+
+
+if [ -x $OC_AUTOTEST ]; then
+
+    case "$oc_feature_run" in
+
+        yes)
+            # /bin/sh is used to intercept "Killed" or "Abort trap" messages
+            if /bin/sh -c $OC_AUTOTEST >> $OC_AUTOCONF_ERR 2>&1; then
+                echo " found"
+                oc_found=yes
+
+                if test -n "$oc_feature_name"; then
+                    have=$oc_have_feature . auto/have
+                fi
+
+            else
+                echo " found but is not working"
+            fi
+        ;;
+
+        value)
+            # /bin/sh is used to intercept "Killed" or "Abort trap" messages
+            if /bin/sh -c $OC_AUTOTEST >> $OC_AUTOCONF_ERR 2>&1; then
+                echo " found"
+                oc_found=yes
+
+                cat << END >> $OC_AUTO_CONFIG_H
+
+#ifndef $oc_feature_name
+#define $oc_feature_name  `$OC_AUTOTEST`
+#endif
+
+END
+            else
+                echo " found but is not working"
+            fi
+        ;;
+
+        bug)
+            # /bin/sh is used to intercept "Killed" or "Abort trap" messages
+            if /bin/sh -c $OC_AUTOTEST >> $OC_AUTOCONF_ERR 2>&1; then
+                echo " not found"
+
+            else
+                echo " found"
+                oc_found=yes
+
+                if test -n "$oc_feature_name"; then
+                    have=$oc_have_feature . auto/have
+                fi
+            fi
+        ;;
+
+        *)
+            echo " found"
+            oc_found=yes
+
+            if test -n "$oc_feature_name"; then
+                have=$oc_have_feature . auto/have
+            fi
+        ;;
+
+    esac
+
+else
+    echo " not found"
+
+    echo "----------"    >> $OC_AUTOCONF_ERR
+    cat $OC_AUTOTEST.cpp  >> $OC_AUTOCONF_ERR
+    echo "----------"    >> $OC_AUTOCONF_ERR
+    echo $oc_test       >> $OC_AUTOCONF_ERR
+    echo "----------"    >> $OC_AUTOCONF_ERR
+fi
+
+rm $OC_AUTOTEST*

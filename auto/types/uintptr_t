@@ -1,0 +1,45 @@
+
+# Copyright (C) Igor Sysoev
+# Copyright (C) Nginx, Inc.
+
+
+echo $oc_n "checking for uintptr_t ...$oc_c"
+echo >> $OC_AUTOCONF_ERR
+echo "checking for uintptr_t" >> $OC_AUTOCONF_ERR
+
+found=no
+
+cat << END > $OC_AUTOTEST.cpp
+
+#include <sys/types.h>
+$OC_INTTYPES_H
+
+int main() {
+    uintptr_t i = 0;
+    return (int) i;
+}
+
+END
+
+oc_test="$CC $CC_TEST_FLAGS $CC_AUX_FLAGS \
+          -o $OC_AUTOTEST $OC_AUTOTEST.cpp $OC_LD_OPT"
+
+eval "$oc_test >> $OC_AUTOCONF_ERR 2>&1"
+
+if [ -x $OC_AUTOTEST ]; then
+    echo " uintptr_t found"
+    found=yes
+else
+    echo $oc_n " uintptr_t not found" $oc_c
+fi
+
+rm $OC_AUTOTEST*
+
+
+if [ $found = no ]; then
+    found="uint`expr 8 \* $oc_ptr_size`_t"
+    echo ", $found used"
+
+    echo "typedef $found  uintptr_t;"                   >> $OC_AUTO_CONFIG_H
+    echo "typedef $found  intptr_t;" | sed -e 's/u//g'  >> $OC_AUTO_CONFIG_H
+fi

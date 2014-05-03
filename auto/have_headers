@@ -1,0 +1,11 @@
+
+# Copyright (C) Jacky Wang
+
+
+cat << END >> $OC_AUTO_HEADERS_H
+
+#ifndef $have
+#define $have  1
+#endif
+
+END

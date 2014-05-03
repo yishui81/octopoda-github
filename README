@@ -1,0 +1,47 @@
+libatomic_ops 安装
+=============================================================
+cd contrib;
+rpm -ivh libatomic_ops-devel-1.2-8.gc.1.el6.i686.rpm 
+rpm -ivh libatomic_ops-devel-1.2-8.gc.1.el6.x86_64.rpm  
+
+
+MAKE msgpack
+==============================================================
+cd msgpack;
+
+chmod +x configure;
+./configure --disable-cxx --libdir=/usr/lib64 --enable-shared=no --enable-static
+make install
+
+
+
+Make UCE
+============================================================================	
+premake
+   chmod +x configure
+
+configure
+   ./configure --prefix=/opt/uce --sbin-path=/opt/uce/bin/uce --conf-path=/opt/uce/conf/uce.conf --pid-path=/var/run/uce.pid --lock-path=/opt/uce/lock --with-file-aio --with-ipv6 --with-libatomic --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_sub_module --with-http_stub_status_module  --with-pcre  --http-log-path=/var/uce/logs/access.log --with-syslog --with-http_admin_interface_module --with-http_purge_cache_manage_module --with-http_cache_group --with-http_cache_ketama_hash --with-http_lua_module
+make
+  make install
+
+package 
+  cd /opt
+  tar czvf uce.tar.gz uce
+
+
+Make HSM
+=========================================================================
+premake
+   chmod +x configure
+
+configure
+   ./configure --prefix=/opt/hsm --sbin-path=/opt/hsm/bin/hsm --conf-path=/opt/hsm/conf/hsm.conf --pid-path=/var/run/hsm.pid --lock-path=/opt/hsm/lock --with-file-aio --with-ipv6  --with-libatomic --with-http_flv_module --with-http_mp4_module --with-http_gunzip_module --with-http_sub_module --with-http_stub_status_module  --with-pcre  --http-log-path=/var/hsm/logs/access.log --with-syslog --process-name=hsm --with-http_purge_cache_manage_module
+
+make
+  make install
+
+package
+  cd /opt
+  tar czvf hsm.tar.gz hsm
+
