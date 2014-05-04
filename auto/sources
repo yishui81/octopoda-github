@@ -5,6 +5,12 @@ CORE_MODULES="oc_core_module"
 
 CORE_INCS="src/core"
 
-CORE_DEPS="oc_config.h oc_core.h"
+#CORE_DEPS="oc_config.h oc_core.h"
 
 CORE_SRCS="src/core/octopoda.cpp"
+
+UNIX_DEPS="$CORE_DEPS"
+
+UNIX_INCS="$CORE_INCS"
+
+UNIX_SRCS="$CORE_SRCS"

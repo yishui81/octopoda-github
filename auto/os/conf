@@ -7,65 +7,9 @@ echo "checking for $NGX_SYSTEM specific features"
 
 case "$NGX_PLATFORM" in
 
-    FreeBSD:*)
-        . auto/os/freebsd
-    ;;
-
     Linux:*)
         . auto/os/linux
     ;;
-
-    SunOS:*)
-        . auto/os/solaris
-    ;;
-
-    Darwin:*)
-        . auto/os/darwin
-    ;;
-
-    win32)
-        . auto/os/win32
-    ;;
-
-    DragonFly:*)
-        have=NGX_FREEBSD . auto/have_headers
-        CORE_INCS="$UNIX_INCS"
-        CORE_DEPS="$UNIX_DEPS $FREEBSD_DEPS"
-        CORE_SRCS="$UNIX_SRCS $FREEBSD_SRCS"
-
-        echo " + sendfile() found"
-        have=NGX_HAVE_SENDFILE . auto/have
-        CORE_SRCS="$CORE_SRCS $FREEBSD_SENDFILE_SRCS"
-
-        oc_spacer='
-'
-    ;;
-
-    HP-UX:*)
-        # HP/UX
-        have=NGX_HPUX . auto/have_headers
-        CORE_INCS="$UNIX_INCS"
-        CORE_DEPS="$UNIX_DEPS $POSIX_DEPS"
-        CORE_SRCS="$UNIX_SRCS"
-        CC_AUX_FLAGS="$CC_AUX_FLAGS -D_XOPEN_SOURCE -D_XOPEN_SOURCE_EXTENDED=1"
-        CC_AUX_FLAGS="$CC_AUX_FLAGS -D_HPUX_ALT_XOPEN_SOCKET_API"
-    ;;
-
-    OSF1:*)
-        # Tru64 UNIX
-        have=NGX_TRU64 . auto/have_headers
-        have=NGX_HAVE_STRERROR_R . auto/nohave
-        CORE_INCS="$UNIX_INCS"
-        CORE_DEPS="$UNIX_DEPS $POSIX_DEPS"
-        CORE_SRCS="$UNIX_SRCS"
-    ;;
-
-    *)
-        CORE_INCS="$UNIX_INCS"
-        CORE_DEPS="$UNIX_DEPS $POSIX_DEPS"
-        CORE_SRCS="$UNIX_SRCS"
-    ;;
-
 esac
 
 

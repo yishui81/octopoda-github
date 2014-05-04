@@ -1,6 +1,5 @@
 
-# Copyright (C) Igor Sysoev
-# Copyright (C) Nginx, Inc.
+# Copyright (C) Jacky Wang
 
 
 help=no
@@ -133,10 +132,6 @@ cat << END
 END
 
     exit 1
-fi
-
-if [ ".$OC_PLATFORM" = ".win32" ]; then
-    OC_WINE=$WINE
 fi
 
 

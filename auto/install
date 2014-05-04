@@ -1,8 +1,9 @@
 
 # Copyright (C) Jacky Wang
 
-
-
+echo "================================================"
+echo "  init octopoda installation "
+echo "================================================"
 
 case ".$OC_SBIN_PATH" in
     ./*)
@@ -133,8 +134,7 @@ fi
 cat << END >> Makefile
 
 build:
-	\$(MAKE) -f $OC_MAKEFILE
-	\$(MAKE) -f $OC_MAKEFILE manpage
+	\$(MAKE) -f $OC_MAKEFILE -j 4
 
 install:
 	\$(MAKE) -f $OC_MAKEFILE install

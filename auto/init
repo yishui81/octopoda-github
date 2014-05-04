@@ -1,5 +1,11 @@
 
 # Copyright (C) Jacky Wang
+
+
+echo "====================================================="
+echo "init octopoda configuration "
+echo "====================================================="
+
 OC_MAKEFILE=$OC_OBJS/Makefile
 
 OC_AUTO_HEADERS_H=$OC_OBJS/oc_auto_headers.h
@@ -16,24 +22,6 @@ MAKEFILE=$OC_OBJS/Makefile
 OC_PCH=
 OC_USE_PCH=
 
-
-# check the echo's "-n" option and "\c" capability
-
-if echo "test\cpp" | grep cpp >/dev/null; then
-
-    if echo -n test | grep n >/dev/null; then
-        oc_n=
-        oc_c=
-
-    else
-        oc_n=-n
-        oc_c=
-    fi
-
-else
-    oc_n=
-    oc_c='\cpp'
-fi
 
 
 # create Makefile

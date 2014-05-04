@@ -3,9 +3,9 @@
 # Copyright (C) Nginx, Inc.
 
 
-echo
-echo "Configuration summary"
-
+echo  "===================================================="
+echo  "		Configuration summary"
+echo  "===================================================="
 
 
 case $OPENSSL in
@@ -32,6 +32,12 @@ case $ZLIB in
     YES)   echo "  + using system zlib library" ;;
     NONE)  echo "  + zlib library is not used" ;;
     *)     echo "  + using zlib library: $ZLIB" ;;
+esac
+
+case $ARE in
+    YES)   echo "  + using ARE library" ;;
+    NONE)  echo "  + ARE library is not used" ;;
+    *)     echo "  + using ARE library: $ARE" ;;
 esac
 
 

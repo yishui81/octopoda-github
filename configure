@@ -6,19 +6,21 @@
 LC_ALL=C
 export LC_ALL
 
+
 . auto/options
 . auto/init
 . auto/sources
 
-
-
 test -d $OC_OBJS || mkdir $OC_OBJS
+
+echo "============================================"
+echo "   SOURCE FILE $CORE_DEPS $CORE_INCS $CORE_MODULES $CORE_SRCS "
+echo "============================================"
 
 echo > $OC_AUTO_HEADERS_H
 echo > $OC_AUTOCONF_ERR
 
 echo "#define OC_CONFIGURE \"$OC_CONFIGURE\"" > $OC_AUTO_CONFIG_H
-
 
 if [ $OC_DEBUG = YES ]; then
     have=OC_DEBUG . auto/have
@@ -61,6 +63,8 @@ fi
 . auto/modules
 . auto/lib/conf
 
+
+
 case ".$OC_PREFIX" in
     .)
         OC_PREFIX=${OC_PREFIX:-/opt/octopoda}
@@ -93,6 +97,10 @@ have=OC_HTTP_CLIENT_TEMP_PATH value="\"$OC_HTTP_CLIENT_TEMP_PATH\""
 . auto/make
 . auto/lib/make
 . auto/install
+
+echo "============================================"
+echo "   SOURCE FILE asdfasdf $CORE_DEPS $CORE_INCS $CORE_MODULES $CORE_SRCS "
+echo "============================================"
 
 # STUB
 . auto/stubs

@@ -45,16 +45,16 @@ if [ -x $OC_AUTOTEST ]; then
     eval "OC_INCLUDE_$oc_name='#include <$oc_include>'"
 
     #STUB
-    eval "OC_$oc_name='#include <$oc_include>'"
+    #eval "OC_$oc_name='#include <$oc_include>'"
 
 else
     echo " not found"
 
-    echo "----------"    >> $OC_AUTOCONF_ERR
+    echo "----------"     >> $OC_AUTOCONF_ERR
     cat $OC_AUTOTEST.cpp  >> $OC_AUTOCONF_ERR
-    echo "----------"    >> $OC_AUTOCONF_ERR
-    echo $oc_test       >> $OC_AUTOCONF_ERR
-    echo "----------"    >> $OC_AUTOCONF_ERR
+    echo "----------"     >> $OC_AUTOCONF_ERR
+    echo $oc_test         >> $OC_AUTOCONF_ERR
+    echo "----------"     >> $OC_AUTOCONF_ERR
 fi
 
 rm $OC_AUTOTEST*
