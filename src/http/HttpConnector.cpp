@@ -8,16 +8,45 @@
 #include "HttpConnector.h"
 #include <errno.h>
 #define RECV_BUF_LENGTH 1024
-HttpConnector::HttpConnector() {
-
-	// TODO Auto-generated constructor stub
+HttpConnector::HttpConnector()
+{
 
 }
 
-HttpConnector::~HttpConnector() {
+HttpConnector::~HttpConnector()
+{
 	// TODO Auto-generated destructor stub
 }
 
+int
+HttpConnector::read(){
+
+	int32_t ret = 0;
+	//FIXME
+	//not constant
+	u_char buf[4096];
+	int32_t length = 0;
+	while((ret = m_stream->Recv(buf, 4096) ) > 0){
+		m_request->AppendUnparsedBuffer(buf, ret);
+		length += ret;
+	}
+	return length;
+}
+
+int
+HttpConnector::write()
+{
+	int32_t ret = 0;
+	//FIXME
+	//not constant
+	u_char buf[4096];
+	int32_t length = 0;
+	while((ret = m_stream->Send(buf, 4096) ) > 0){
+		m_request->AppendUnparsedBuffer(buf, ret);
+		length += ret;
+	}
+	return length;
+}
 
 int
 HttpConnector::handle_open  (const URE_Msg& msg){
@@ -36,33 +65,27 @@ HttpConnector::handle_close (UWorkEnv * orign_uwe, long retcode){
 }
 
 int
-HttpConnector::handle_input (URE_Handle h){
-
-
-	int32_t result = 0;
-	if(m_status == CONNECT_ACCEPTED || m_status >= CONNECT_WROTE){
-		 m_request = new HttpRequest(this);
+HttpConnector::handle_input (URE_Handle h)
+{
+	if(!m_request){
+		m_request = new HttpRequest(this);
 	}
-	while((result = m_stream->Recv(this->recv_buf, RECV_BUF_LENGTH)) > 0){
+	if(m_request == NULL){
 		//TODO
 	}
-	notify(this->m_request->GetUTOID());
-
-//	if(errno == EAGAIN ||errno ){
-//		TimeValue tv;
-//		const void * comment = (const void *)"read request again";
-//		tv.SetTime( 0, 1000 );
-//		m_read_time_t = schedule_timer( tv, comment );
-//	}
-
-
+	notify(m_request->GetUTOID());
 	return 0;
 }
 
 int
 HttpConnector::handle_output (URE_Handle h){
+	if(!m_request){
+		//TODO
+		return -1;
+	}
+	int32_t ret =  write();
 
-	return 0;
+	 notify(m_request->GetUTOID());
 }
 
 int

@@ -10,7 +10,6 @@
 Request::Request(IOStream* iostream) {
 	// TODO Auto-generated constructor stub
 	this->m_stream = iostream;
-
 }
 
 Request::~Request() {

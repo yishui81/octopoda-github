@@ -10,8 +10,8 @@
 
 
 
-HttpRequest::HttpRequest(HttpConnector* connector) {
-	this->m_connector = connector;
+HttpRequest::HttpRequest(Connector* connector) {
+	m_connector = connector;
 }
 
 HttpRequest::~HttpRequest() {
@@ -19,7 +19,7 @@ HttpRequest::~HttpRequest() {
 }
 
 int32_t HttpRequest::Read(){
-
+	m_connector->read();
 	return 0;
 }
 

@@ -57,7 +57,7 @@ ZLIB=NONE
 ZLIB_OPT=
 ZLIB_ASM=NO
 
-HTTP=NO
+HTTP=YES
 opt=
 
 for option

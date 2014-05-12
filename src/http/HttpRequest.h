@@ -167,7 +167,7 @@ typedef enum {
 
 class HttpRequest : public UTaskObj{
 public:
-	HttpRequest(HttpConnector* connector);
+	HttpRequest(Connector* connector);
 	virtual ~HttpRequest();
 
 public:
@@ -198,7 +198,7 @@ private :
 
 public:
 	HttpParser*  	 	   m_parser;
-	HttpConnector*   	   m_connector;
+	Connector*   	  	   m_connector;
 	HTTP_REQUEST_PROCESS_PHASE			   m_phase;
 	 uint32_t                   m_signature;         /* "HTTP" */
 
@@ -221,7 +221,7 @@ public:
 //	                                         /* of ngx_http_upstream_state_t */
 
 //	    ngx_pool_t                       *pool;
-	    ngx_buf_t                        *header_in;
+//	    ngx_buf_t                        *header_in;
 
 	    ngx_http_headers_in_t             headers_in;
 	    ngx_http_headers_out_t            headers_out;

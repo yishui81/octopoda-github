@@ -13,8 +13,8 @@
  */
 
 #include "HttpRequest.h"
-#include <core/oc_core.h>
-#include <core/StringUtils.h>
+#include <oc_core.h>
+#include <StringUtils.h>
 #include <vector>
 
 using namespace std;

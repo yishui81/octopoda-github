@@ -13,7 +13,6 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdint.h>
-#include <Octopoda.h>
 #include <BaseARE/UTaskObj.h>
 #include <BaseARE/SockAcceptor.h>
 #include <BaseARE/UREData.h>

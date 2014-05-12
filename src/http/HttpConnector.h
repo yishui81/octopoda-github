@@ -21,7 +21,7 @@ enum{
 	CONNECT_WRITING,
 	CONNECT_WROTE,
 	CONNECT_FINISH
-}CONNECTOR_STATUS;
+};
 
 class HttpConnector : public Connector {
 public:
@@ -29,7 +29,8 @@ public:
 	virtual ~HttpConnector();
 
 public:
-
+	virtual int32_t read();
+	virtual int32_t write();
 
     virtual int handle_open  (const URE_Msg& msg);
     virtual int handle_close (UWorkEnv * orign_uwe, long retcode);
@@ -66,7 +67,7 @@ private:
     HttpChunkContext*  m_chunk;
     HttpMethod* 	m_method;
     u_char 			recv_buf[1024];
-    HttpRequest*    m_request;
+    Request*    		m_request;
 };
 
 #endif /* HTTPCONNECTOR_H_ */

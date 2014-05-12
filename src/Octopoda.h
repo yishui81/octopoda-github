@@ -11,16 +11,12 @@
 #include <oc_core.h>
 #include <stdarg.h>
 #include <string>
-#include <core/Acceptor.h>
+#include "core/Acceptor.h"
+#include <BaseARE/ConfigSet.h>
 
 
 #define OC_VER "Octopoda 1.0.0"
 
-#define oc_linefeed(p)          *p++ = LF;
-#define OC_LINEFEED_SIZE        1
-#define OC_LINEFEED             "\x0a"
-
-#define OC_MAX_ERROR_STR   2048
 
 #define PROG_VERSION "Octopoda 0.0.0.1 20140304"
 
@@ -54,10 +50,10 @@ public:
 		if(m_cfg == NULL){
 			return "etc/UServerHawk.conf";
 		}else{
-			return m_cfg;
+			return m_cfgfile.c_str();
 		}
 	};
-	const char * get_progname() { return "UServerHawk"; }
+	const char * get_progname() { return "Optopoda"; }
 	const char * get_progdesc() { return "Advaneced Powerful Universal Streaming Server."; }
 	const char * get_progversion() { return PROG_VERSION; }
 	const char * get_buildtime() { return __DATE__; }

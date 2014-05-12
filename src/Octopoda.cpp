@@ -23,9 +23,15 @@
 #include "../../../SealsARE/BaseARE/UREData.h"
 #include "../../../SealsARE/BaseARE/UTaskObj.h"
 #include "../../../SealsARE/BaseARE/UWEManager.h"
-#include "Acceptor.h"
+#include "http/HttpAcceptor.h"
 #include "oc_cpu.h"
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#include <getopt.h>
+
+
 
 
 class UWorkEnv;
@@ -69,7 +75,7 @@ Octopoda::Octopoda():
 	m_test_mode(false),
 	m_daemon_mode(false),
 	m_cfg(NULL),
-	m_uwemngr(NULL)
+	m_uwemngr(NULL),
 	m_acceptor(NULL)
 {
 
@@ -97,6 +103,18 @@ int Octopoda::Start()
 {
 	PR_DEBUG( "Octopoda Start." );
 	//TODO
+	m_acceptor = new HttpAcceptor();
+	std::string ip = "0.0.0.0";
+	uint32_t    port = 8081;
+	m_acceptor->SetHostName(ip);
+	m_acceptor->SetPort(port);
+	m_acceptor->SetBackLog(1024);
+	m_acceptor->enableTcpDefferAccept(1);
+
+	UWEManager* manager =   GetUweMngr();
+	UWorkEnv* uwv = manager->GetSharedUWE();
+	m_acceptor->EnterWorkEnv(uwv);
+
 
 	return 0;
 }
@@ -308,16 +326,20 @@ int Octopoda::do_cmdline( int argc, char * argv[] )
 
 int Octopoda::do_output_version()
 {
-	APPBASE_OUTPUT( "%s %s", get_progname(), get_progversion() );
+	APPBASE_OUTPUT( "%s : %s", get_progname(), get_progdesc() );
+	APPBASE_OUTPUT( "CopyRight (c) 2005, 2006 Onewave, Inc. All Right Reserved." );
+	APPBASE_OUTPUT( "Version : %s", get_progversion() );
+	APPBASE_OUTPUT( "Build : %s", get_buildtime() );
 	exit(0);
-	return 0;
 }
 
 int Octopoda::do_output_depend()
 {
-	APPBASE_OUTPUT( "SealsARE %s", PROG_VERSION );
+	APPBASE_OUTPUT( "%s : %s", get_progname(), get_progdesc() );
+	APPBASE_OUTPUT( "CopyRight (c) 2005, 2006 Onewave, Inc. All Right Reserved." );
+	APPBASE_OUTPUT( "Version : %s", get_progversion() );
+	APPBASE_OUTPUT( "Build : %s", get_buildtime() );
 	exit(0);
-	return 0;
 }
 
 int Octopoda::do_output_usage()
@@ -434,9 +456,11 @@ int Octopoda::do_create_uwe()
 		aiostyle = m_cfg->GetIntVal( sect, "uwe_fastio_mode", 1 );
 		if( aiostyle < 1 || aiostyle > 3 )
 			aiostyle = 1;
-		uwenum = m_cfg->GetIntVal( sect, "uwe_num", 8 );
-		if( uwenum < 1 || uwenum > 8192 )
-			uwenum = 16;
+		uwenum = m_cfg->GetIntVal( sect, "uwe_num", 0 );
+		if( uwenum < 0 || uwenum > 8192 ){
+			uwenum = get_cpu_num();
+		}
+
 		maxfd = m_cfg->GetIntVal( sect, "uwe_maxfd", 8192 );
 
 		int eventnum = m_cfg->GetIntVal( sect, "uwe_eventnum", 0 );
@@ -444,6 +468,7 @@ int Octopoda::do_create_uwe()
 		int tasknum = m_cfg->GetIntVal( sect, "uwe_tasknum", 0 );
 		int aiothreads = m_cfg->GetIntVal( sect, "uwe_aio_threads", 8 );
 		int taskthreads = m_cfg->GetIntVal( sect, "uwe_task_threads", 1 );
+
 
 		UWEManager::SetSharedParam( eventnum, aionum, aiothreads, tasknum, taskthreads );
 
@@ -551,86 +576,6 @@ end_init:
 	delete octopoda, octopoda = NULL;
 
 	return 0;
-
-    SealsFC_NS::SfcLogger::SetLevel  (4);
-    SealsFC_NS::SfcLogger::SetSyslog (3);
-    SealsFC_NS::SfcLogger::SetStderr ( 1);
-
-    if (oc_get_options(argc, argv) != OC_OK) {
-        return 1;
-    }
-
-    if (oc_show_version) {
-    	fprintf(stderr,"octopoda version: " OC_VER OC_LINEFEED);
-
-        if (oc_show_help) {
-        	fprintf(stderr,
-                "Usage: octopoda [-?hvVtq] [-s signal] [-c filename] "
-                             "[-p prefix] [-g directives]" OC_LINEFEED   OC_LINEFEED
-                "Options:" OC_LINEFEED
-                "  -?,-h         : this help" OC_LINEFEED
-                "  -v            : show version and exit" OC_LINEFEED
-                "  -V            : show version and configure options then exit"
-                                   OC_LINEFEED
-                "  -t            : test configuration and exit" OC_LINEFEED
-                "  -q            : suppress non-error messages "
-                                   "during configuration testing" OC_LINEFEED
-                "  -s signal     : send signal to a master process: "
-                                   "stop, quit, reopen, reload" OC_LINEFEED
-#ifdef OC_PREFIX
-                "  -p prefix     : set prefix path (default: "  OC_PREFIX ")" OC_LINEFEED
-#else
-                "  -p prefix     : set prefix path (default: NONE)" OC_LINEFEED
-#endif
-                "  -c filename   : set configuration file (default: " OC_CONF_PATH ")" OC_LINEFEED
-                "  -g directives : set global directives out of configuration "
-                                   "file" OC_LINEFEED OC_LINEFEED
-                );
-        }
-
-        if (oc_show_configure) {
-        	fprintf(stderr,
-#ifdef OC_COMPILER
-                "built by " OC_COMPILER OC_LINEFEED
-#endif
-#if (OC_SSL)
-#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
-                "TLS SNI support enabled" OC_LINEFEED
-#else
-                "TLS SNI support disabled" OC_LINEFEED
-#endif
-#endif
-                "configure arguments:" OC_CONFIGURE OC_LINEFEED);
-        }
-
-        if (!oc_test_config) {
-            return 0;
-      }
-    }
-
-
-    static UWEManager* pUwem    = NULL;
-    UWorkEnv*          pUwe     = NULL;
-    conf.uw_num = get_cpu_num();
-    conf.max_fd = 50000;
-    conf.ip = "0.0.0.0";
-    conf.port = 7777;
-    pUwem = UWEManager::Create(URE_AIOIMP_SIMULATE, conf.uw_num, conf.max_fd);
-   // CHECK_GO(pUwem, 0, ERROR_EXIT, "UWEManager::Create error.");
-
-    /* join uwe */
-    pUwe = pUwem->GetWorkEnv();
-    //CHECK_GO(pUwe, 0, ERROR_EXIT, "pUwem->GetWorkEnv error.");
-
-    Acceptor csAcceptUto;
-    /* create accept uto */
-    csAcceptUto.EnterWorkEnv(UWEManager::GetInstance()->GetSoledUWE());
-
-   sleep(10000);
-
-   csAcceptUto.LeaveWorkEnv(0);
-
-
 }
 
 

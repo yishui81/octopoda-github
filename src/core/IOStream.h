@@ -8,17 +8,16 @@
 #ifndef IOSTREAM_H_
 #define IOSTREAM_H_
 
-#include "Request.h"
 /*
  *
  */
 class IOStream {
 public:
-	IOStream();
-	virtual ~IOStream();
+	IOStream(){};
+	virtual ~IOStream(){};
 public:
-	virtual uint32_t read(Request* request) = 0;
-	virtual uint32_t write(Request* request) = 0;
+	virtual uint32_t read() = 0;
+	virtual uint32_t write() = 0;
 };
 
 #endif /* IOSTREAM_H_ */

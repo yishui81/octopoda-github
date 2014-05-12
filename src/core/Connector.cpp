@@ -6,7 +6,8 @@
  */
 #include "Connector.h"
 
-Connector::Connector(){
+Connector::Connector():m_request(NULL)
+{
 
 }
 
@@ -15,9 +16,9 @@ Connector::~Connector()
 
 }
 
-uint32_t Connector::read(Request* r)
+uint32_t Connector::read()
 {
-	u_char buffer[4096];
+	char buffer[4096];
 	int ret = 0;
 	while((ret = m_stream.Recv(buffer,4096)) == 0){
 		//TODO append buffer into  Request buffer
@@ -27,14 +28,15 @@ uint32_t Connector::read(Request* r)
 		//TODO
 		LeaveWorkEnv(ret);
 	}
+	return 0;
 }
 
-uint32_t Connector::write(Request* r)
+uint32_t Connector::write()
 {
-	int ret = 0;
-	while((ret = m_stream.Send(r->getOutput())) == 0){
-
-	}
+//	int ret = 0;
+//	while((ret = m_stream.Send(m_request->getOutput())) == 0){
+//
+//	}
 	return 0;
 }
 
