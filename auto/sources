@@ -3,11 +3,20 @@
 
 CORE_MODULES="oc_core_module"
 
-CORE_INCS="src/core"
+CORE_INCS="src/core ../SealsARE"
 
-#CORE_DEPS="oc_config.h oc_core.h"
+CORE_DEPS="src/core/oc_config.h \
+				src/core/octopoda.h \
+				src/core/oc_string.h \
+				src/core/oc_cpu.h \
+				src/core/acceptor.h \
+				src/core/connector.h \
+				src/core/oc_err.h \
+				src/core/oc_core.h"
 
-CORE_SRCS="src/core/octopoda.cpp"
+CORE_SRCS="src/core/octopoda.cpp \
+			   src/core/connector.cpp \
+			   src/core/acceptor.cpp"
 
 UNIX_DEPS="$CORE_DEPS"
 

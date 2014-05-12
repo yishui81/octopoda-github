@@ -41,7 +41,7 @@ if [ $USE_ZLIB = YES ]; then
 fi
 
 if [ $USE_ARE = YES ]; then
-    . auto/lib/zlib/conf
+    . auto/lib/are/conf
 fi
 
 

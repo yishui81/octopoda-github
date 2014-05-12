@@ -1,6 +1,5 @@
 
-# Copyright (C) Igor Sysoev
-# Copyright (C) Nginx, Inc.
+# Copyright (C) Jacky Wang
 
 
 cat << END >> $OC_AUTO_CONFIG_H

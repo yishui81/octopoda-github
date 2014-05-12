@@ -1,6 +1,5 @@
 
-# Copyright (C) Igor Sysoev
-# Copyright (C) Nginx, Inc.
+# Copyright (C) Jacky Wang
 
 
 echo $oc_n "checking for $oc_type ...$oc_c"

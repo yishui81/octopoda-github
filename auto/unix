@@ -803,4 +803,6 @@ oc_feature_test='double a = 1.890;
                   if(floorf(a) == 1.0000)return 1'
 . auto/feature
 
-CORE_LIBS="$CORE_LIBS -lm"
+CORE_LIBS="$CORE_LIBS -lm -laio -lrt"
+
+
