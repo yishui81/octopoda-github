@@ -4,7 +4,7 @@
 
 echo "creating $OC_MAKEFILE"
 
-mkdir -p $OC_OBJS/src/core 
+mkdir -p $OC_OBJS/src/core $OC_OBJS/src/http $OC_OBJS/src/ts
 
 
 oc_objs_dir=$OC_OBJS$oc_regex_dirsep

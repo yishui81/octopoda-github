@@ -48,7 +48,7 @@ inline  int32_t oc_strcmp(u_char* s1, u_char* s2){
 	return ::strcmp((const char *) s1, (const char *) s2);
 };
 
-inline int32_t oc_strstr(u_char* s1, u_char*  s2){
+inline const char* oc_strstr(u_char* s1, u_char*  s2){
 
 	return ::strstr((const char *) s1, (const char *) s2);
 };

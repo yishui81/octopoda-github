@@ -18,15 +18,15 @@ public:
     ~Connector();
 
 public:
-    virtual uint32_t read();
-    virtual uint32_t write();
+    virtual int32_t read();
+    virtual int32_t write();
     virtual int handle_open  (const URE_Msg& msg);
     virtual int handle_close (UWorkEnv * orign_uwe, long retcode);
     virtual int handle_input (URE_Handle h);
     uint32_t  Attach(int fd){ return m_stream.Attach(fd);}
 
 private:
-    Request*  m_request;
+    //Request*  m_request;
     SockStream m_stream;
 };
 

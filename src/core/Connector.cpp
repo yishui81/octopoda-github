@@ -6,9 +6,9 @@
  */
 #include "Connector.h"
 
-Connector::Connector():m_request(NULL)
+Connector::Connector()
 {
-
+	//this->m_request = NULL;
 }
 
 Connector::~Connector()
@@ -16,7 +16,7 @@ Connector::~Connector()
 
 }
 
-uint32_t Connector::read()
+int32_t Connector::read()
 {
 	char buffer[4096];
 	int ret = 0;
@@ -31,7 +31,7 @@ uint32_t Connector::read()
 	return 0;
 }
 
-uint32_t Connector::write()
+int32_t Connector::write()
 {
 //	int ret = 0;
 //	while((ret = m_stream.Send(m_request->getOutput())) == 0){

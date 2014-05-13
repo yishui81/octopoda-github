@@ -6,7 +6,7 @@
  */
 
 #include "HttpParser.h"
-#include "core/oc_core.h"
+#include "oc_core.h"
 #include "HttpRequest.h"
 #include "HttpChunk.h"
 

@@ -6,10 +6,11 @@
  */
 
 #include "Request.h"
+#include "Connector.h"
 
-Request::Request(IOStream* iostream) {
+Request::Request(Connector* iostream) {
 	// TODO Auto-generated constructor stub
-	this->m_stream = iostream;
+	this->m_connector = iostream;
 }
 
 Request::~Request() {

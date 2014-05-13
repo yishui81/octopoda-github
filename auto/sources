@@ -2,150 +2,151 @@
 # Copyright (C) Jacky Wang
 TS_MODULES="oc_ts_module"
 
-TS_INCS="src/libts"
+TS_INCS="src src/ts"
 
-TS_DEPS="libts/Allocator.h \
-			libts/Arena.h \
-			libts/Bitops.h \
-			libts/Compatability.h \
-			libts/defalloc.h \
-			libts/Diags.h \
-			libts/DynArray.h \
-			libts/EventNotify.h \
-			libts/fastlz.h \
-			libts/HostLookup.h \
-			libts/I_Layout.h \
-			libts/ink_aiocb.h \
-			libts/ink_align.h \
-			libts/ink_apidefs.h \
-			libts/ink_args.h \
-			libts/ink_assert.h \
-			libts/ink_atomic.h \
-			libts/ink_auth_api.h \
-			libts/ink_autoconf.h \
-			libts/ink_base64.h \
-			libts/ink_cap.h \
-			libts/ink_code.h \
-			libts/ink_config.h \
-			libts/ink_defs.h \
-			libts/InkErrno.h \
-			libts/ink_error.h \
-			libts/ink_exception.h \
-			libts/ink_file.h \
-			libts/ink_hash_table.h \
-			libts/ink_hrtime.h \
-			libts/ink_inet.h \
-			libts/ink_inout.h \
-			libts/ink_llqueue.h \
-			libts/ink_lockfile.h \
-			libts/INK_MD5.h \
-			libts/ink_memory.h \
-			libts/ink_mutex.h \
-			libts/ink_platform.h \
-			libts/InkPool.h \
-			libts/ink_queue_ext.h \
-			libts/ink_queue.h \
-			libts/ink_rand.h \
-			libts/ink_resolver.h \
-			libts/ink_resource.h \
-			libts/ink_rwlock.h \
-			libts/ink_sock.h \
-			libts/ink_sprintf.h \
-			libts/ink_stack_trace.h \
-			libts/ink_string.h \
-			libts/ink_string++.h \
-			libts/ink_sys_control.h \
-			libts/ink_syslog.h \
-			libts/ink_thread.h \
-			libts/ink_time.h \
-			libts/IntrusiveDList.h \
-			libts/IpMapConf.h \
-			libts/IpMap.h \
-			libts/I_Version.h \
-			libts/libts.h \
-			libts/List.h \
-			libts/Map.h \
-			libts/MatcherUtils.h \
-			libts/MimeTable.h \
-			libts/ParseRules.h \
-			libts/Ptr.h \
-			libts/RawHashTable.h \
-			libts/Regex.h \
-			libts/Regression.h \
-			libts/Resource.h \
-			libts/SimpleTokenizer.h \
-			libts/TextBuffer.h \
-			libts/Tokenizer.h \
-			libts/Trie.h \
-			libts/TsBuffer.h \
-			libts/Vec.h "
+TS_DEPS="ts/Allocator.h \
+			ts/Arena.h \
+			ts/Bitops.h \
+			ts/Compatability.h \
+			ts/defalloc.h \
+			ts/Diags.h \
+			ts/DynArray.h \
+			ts/EventNotify.h \
+			ts/fastlz.h \
+			ts/HostLookup.h \
+			ts/I_Layout.h \
+			ts/ink_aiocb.h \
+			ts/ink_align.h \
+			ts/ink_apidefs.h \
+			ts/ink_args.h \
+			ts/ink_assert.h \
+			ts/ink_atomic.h \
+			ts/ink_auth_api.h \
+			ts/ink_autoconf.h \
+			ts/ink_base64.h \
+			ts/ink_cap.h \
+			ts/ink_code.h \
+			ts/ink_config.h \
+			ts/ink_defs.h \
+			ts/InkErrno.h \
+			ts/ink_error.h \
+			ts/ink_exception.h \
+			ts/ink_file.h \
+			ts/ink_hash_table.h \
+			ts/ink_hrtime.h \
+			ts/ink_inet.h \
+			ts/ink_inout.h \
+			ts/ink_llqueue.h \
+			ts/ink_lockfile.h \
+			ts/INK_MD5.h \
+			ts/ink_memory.h \
+			ts/ink_mutex.h \
+			ts/ink_platform.h \
+			ts/InkPool.h \
+			ts/ink_queue_ext.h \
+			ts/ink_queue.h \
+			ts/ink_rand.h \
+			ts/ink_resolver.h \
+			ts/ink_resource.h \
+			ts/ink_rwlock.h \
+			ts/ink_sock.h \
+			ts/ink_sprintf.h \
+			ts/ink_stack_trace.h \
+			ts/ink_string.h \
+			ts/ink_string++.h \
+			ts/ink_sys_control.h \
+			ts/ink_syslog.h \
+			ts/ink_thread.h \
+			ts/ink_time.h \
+			ts/IntrusiveDList.h \
+			ts/IpMapConf.h \
+			ts/IpMap.h \
+			ts/I_Version.h \
+			ts/ts.h \
+			ts/List.h \
+			ts/Map.h \
+			ts/MatcherUtils.h \
+			ts/MimeTable.h \
+			ts/ParseRules.h \
+			ts/Ptr.h \
+			ts/RawHashTable.h \
+			ts/Regex.h \
+			ts/Regression.h \
+			ts/Resource.h \
+			ts/SimpleTokenizer.h \
+			ts/TextBuffer.h \
+			ts/Tokenizer.h \
+			ts/Trie.h \
+			ts/TsBuffer.h \
+			ts/Vec.h "
 			
-TS_SRCS="libts/Arena.cc \
-			libts/Bitops.cc \
-			libts/CompileParseRules.cc \
-			libts/Diags.cc \
-			libts/EventNotify.cc \
-			libts/HostLookup.cc \
-			libts/ink_args.cc \
-			libts/ink_assert.cc \
-			libts/ink_auth_api.cc \
-			libts/ink_base64.cc \
-			libts/ink_cap.cc \
-			libts/ink_code.cc \
-			libts/ink_defs.cc \
-			libts/ink_error.cc \
-			libts/ink_file.cc \
-			libts/ink_hash_table.cc \
-			libts/ink_hrtime.cc \
-			libts/ink_inet.cc \
-			libts/ink_memory.cc \
-			libts/ink_mutex.cc \
-			libts/ink_queue.cc \
-			libts/ink_queue_ext.cc \
-			libts/ink_queue_utils.cc \
-			libts/ink_rand.cc \
-			libts/ink_res_init.cc \
-			libts/ink_res_mkquery.cc \
-			libts/ink_resource.cc \
-			libts/ink_rwlock.cc \
-			libts/ink_sock.cc \
-			libts/ink_sprintf.cc \
-			libts/ink_stack_trace.cc \
-			libts/ink_string.cc \
-			libts/ink_string++.cc \
-			libts/ink_sys_control.cc \
-			libts/ink_syslog.cc \
-			libts/ink_thread.cc \
-			libts/ink_time.cc \
-			libts/IntrusivePtrTest.cc \
-			libts/IpMap.cc \
-			libts/IpMapConf.cc \
-			libts/Layout.cc \   
-			libts/llqueue.cc \
-			libts/load_http_hdr.cc \
-			libts/lockfile.cc \
-			libts/MatcherUtils.cc \
-			libts/MimeTable.cc \
-			libts/ParseRules.cc \
-			libts/RawHashTable.cc \
-			libts/Regex.cc \
-			libts/Regression.cc \
-			libts/Resource.cc \
-			libts/TextBuffer.cc \
-			libts/Tokenizer.cc \
-			libts/Vec.cc \
-			libts/Version.cc "
+TS_SRCS="ts/Arena.cc \
+			ts/Bitops.cc \
+			ts/CompileParseRules.cc \
+			ts/Diags.cc \
+			ts/EventNotify.cc \
+			ts/HostLookup.cc \
+			ts/ink_args.cc \
+			ts/ink_assert.cc \
+			ts/ink_auth_api.cc \
+			ts/ink_base64.cc \
+			ts/ink_cap.cc \
+			ts/ink_code.cc \
+			ts/ink_defs.cc \
+			ts/ink_error.cc \
+			ts/ink_file.cc \
+			ts/ink_hash_table.cc \
+			ts/ink_hrtime.cc \
+			ts/ink_inet.cc \
+			ts/ink_memory.cc \
+			ts/ink_mutex.cc \
+			ts/ink_queue.cc \
+			ts/ink_queue_ext.cc \
+			ts/ink_queue_utils.cc \
+			ts/ink_rand.cc \
+			ts/ink_res_init.cc \
+			ts/ink_res_mkquery.cc \
+			ts/ink_resource.cc \
+			ts/ink_rwlock.cc \
+			ts/ink_sock.cc \
+			ts/ink_sprintf.cc \
+			ts/ink_stack_trace.cc \
+			ts/ink_string.cc \
+			ts/ink_string++.cc \
+			ts/ink_sys_control.cc \
+			ts/ink_syslog.cc \
+			ts/ink_thread.cc \
+			ts/ink_time.cc \
+			ts/IntrusivePtrTest.cc \
+			ts/IpMap.cc \
+			ts/IpMapConf.cc \
+			ts/Layout.cc \   
+			ts/llqueue.cc \
+			ts/load_http_hdr.cc \
+			ts/lockfile.cc \
+			ts/MatcherUtils.cc \
+			ts/MimeTable.cc \
+			ts/ParseRules.cc \
+			ts/RawHashTable.cc \
+			ts/Regex.cc \
+			ts/Regression.cc \
+			ts/Resource.cc \
+			ts/TextBuffer.cc \
+			ts/Tokenizer.cc \
+			ts/Vec.cc \
+			ts/Version.cc "
  
 
 CORE_MODULES="oc_core_module"
 
-CORE_INCS="src/core ./ ../SealsARE"
+CORE_INCS="src/core ../SealsARE src"
 
 CORE_DEPS="src/Octopoda.h \
 				src/core/oc_config.h \
 				src/core/oc_string.h \
 				src/core/oc_cpu.h \
 				src/core/Acceptor.h \
+				src/core/Request.h \
 				src/core/Connector.h \
 				src/core/oc_err.h \
 				src/core/IOStream.h \
@@ -153,21 +154,20 @@ CORE_DEPS="src/Octopoda.h \
 			
 CORE_SRCS="src/Octopoda.cpp \
 			   src/core/Connector.cpp \
+			   src/core/Request.cpp \
 			   src/core/Acceptor.cpp"	
 			   
 HTTP_MODULE="oc_http_module"
 
-HTTP_INCS="src/http"
+HTTP_INCS="src/http src/core src"
 
 HTTP_DEPS=" src/http/HttpAcceptor.h \
 				src/http/HttpConnector.h \
-				src/http/HttpRequest.h \
-				src/http/HttpParser.h"
+				src/http/HttpRequest.h "
 				
 HTTP_SRCS="src/http/HttpAcceptor.cpp \
 			   src/http/HttpConnector.cpp \
-			   src/http/HttpRequest.cpp \
-			   src/http/HttpParser.cpp"
+			   src/http/HttpRequest.cpp "	
 			   
 
 UNIX_DEPS="$HTTP_DEPS $CORE_DEPS $TS_DEPS"

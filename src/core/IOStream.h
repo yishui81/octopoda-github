@@ -7,7 +7,7 @@
 
 #ifndef IOSTREAM_H_
 #define IOSTREAM_H_
-
+#include <stdint.h>
 /*
  *
  */
@@ -16,8 +16,8 @@ public:
 	IOStream(){};
 	virtual ~IOStream(){};
 public:
-	virtual uint32_t read() = 0;
-	virtual uint32_t write() = 0;
+	virtual int32_t read() = 0;
+	virtual int32_t write() = 0;
 };
 
 #endif /* IOSTREAM_H_ */

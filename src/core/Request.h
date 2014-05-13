@@ -7,21 +7,22 @@
 
 #ifndef REQUEST_H_
 #define REQUEST_H_
-#include "IOStream.h"
+#include "Connector.h"
 #include <BaseARE/UTaskObj.h>
 /*
  *
  */
+class Connector;
 class Request : public UTaskObj {
 public:
-	Request(IOStream* stream);
+	Request(Connector* stream);
 	virtual ~Request();
 
-	virtual int32_t Parse(){return 0;};
-	virtual int32_t AppendUnparsedBuffer(const u_char* buf, uint32_t length){return 0;};
+	virtual int32_t Parse(){return 0;}
+	virtual int32_t AppendUnparsedBuffer(const char* buf, uint32_t length){return 0;}
 
-private:
-	IOStream* m_stream;
+protected:
+	Connector* m_connector;
 };
 
 #endif /* REQUEST_H_ */

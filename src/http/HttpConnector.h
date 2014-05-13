@@ -10,6 +10,8 @@
 #include <BaseARE/UTaskObj.h>
 #include <BaseARE/TimeValue.h>
 #include <BaseARE/SockStream.h>
+#include "Connector.h"
+#include "Request.h"
 /*
  *
  */
@@ -43,12 +45,12 @@ public:
     virtual	int handle_timeout( const TimeValue & origts, long time_id, const void * act );
 
    //message
-    virtual int handle_message( const URE_Msg & msg ) { return -1; }
+    virtual int handle_message( const URE_Msg & msg ) ;
     virtual int handle_failed_message( const URE_Msg & msg ) ;
 
    //aio
-    virtual int handle_read( URE_AioBlock * aib ) { return 0; }
-    virtual int handle_write( URE_AioBlock * aib ) { return 0; }
+    virtual int handle_read( URE_AioBlock * aib );
+    virtual int handle_write( URE_AioBlock * aib );
 
 
 public:
@@ -63,9 +65,9 @@ private:
     std::string 		m_sessionid;
     uint64_t			m_requests;
     SockStream* 	m_stream;
-    HttpParser* 		m_paser;
-    HttpChunkContext*  m_chunk;
-    HttpMethod* 	m_method;
+//    HttpParser* 		m_paser;
+//    HttpChunkContext*  m_chunk;
+//    HttpMethod* 	m_method;
     u_char 			recv_buf[1024];
     Request*    		m_request;
 };

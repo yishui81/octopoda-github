@@ -7,6 +7,9 @@
 
 #include "HttpConnector.h"
 #include <errno.h>
+#include "HttpRequest.h"
+#include "IOStream.h"
+
 #define RECV_BUF_LENGTH 1024
 HttpConnector::HttpConnector()
 {
@@ -24,7 +27,7 @@ HttpConnector::read(){
 	int32_t ret = 0;
 	//FIXME
 	//not constant
-	u_char buf[4096];
+	char buf[4096];
 	int32_t length = 0;
 	while((ret = m_stream->Recv(buf, 4096) ) > 0){
 		m_request->AppendUnparsedBuffer(buf, ret);
@@ -39,7 +42,7 @@ HttpConnector::write()
 	int32_t ret = 0;
 	//FIXME
 	//not constant
-	u_char buf[4096];
+	char buf[4096];
 	int32_t length = 0;
 	while((ret = m_stream->Send(buf, 4096) ) > 0){
 		m_request->AppendUnparsedBuffer(buf, ret);
@@ -73,7 +76,8 @@ HttpConnector::handle_input (URE_Handle h)
 	if(m_request == NULL){
 		//TODO
 	}
-	notify(m_request->GetUTOID());
+	//TODO
+	//notify the request to continue process
 	return 0;
 }
 
@@ -83,16 +87,20 @@ HttpConnector::handle_output (URE_Handle h){
 		//TODO
 		return -1;
 	}
-	int32_t ret =  write();
+//	int32_t ret =  write();
+	//TODO
+	//notify the request to continue process
+	 //notify(m_request->GetUTOID());
 
-	 notify(m_request->GetUTOID());
+	 return 0;
 }
 
 int
 HttpConnector::handle_timeout( const TimeValue & origts, long time_id, const void * act ){
-	if(m_read_time_t == time_t ){
-
-	}
+	//TODO
+	//	if(m_read_time_t == time_t ){
+//
+//	}
 	return 0;
 }
 

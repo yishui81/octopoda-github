@@ -7,11 +7,14 @@
 
 #include "HttpRequest.h"
 #include "HttpConnector.h"
+#include "Connector.h"
+#include "BaseARE/UREData.h"
 
 
-
-HttpRequest::HttpRequest(Connector* connector) {
-	m_connector = connector;
+HttpRequest::HttpRequest(Connector* connector) : Request(connector) {
+	m_phase = OC_HTTP_UNKOWN_PHASE;
+	headers_in.clear();
+	headers_out.clear();
 }
 
 HttpRequest::~HttpRequest() {
@@ -33,7 +36,6 @@ int32_t HttpRequest::handle_request(){
 	switch(m_phase){
 		case OC_HTTP_UNKOWN_PHASE:
 		case OC_HTTP_POST_READ_PHASE:
-
 		case OC_HTTP_SERVER_REWRITE_PHASE:
 		case OC_HTTP_FIND_CONFIG_PHASE:
 		case OC_HTTP_REWRITE_PHASE:
@@ -46,6 +48,7 @@ int32_t HttpRequest::handle_request(){
 		case OC_HTTP_LOG_PHASE:
 			break;
 		default:
+			break;
 	}
 	return 0;
 }
@@ -70,8 +73,8 @@ HttpRequest::handle_timeout( const TimeValue & origts, long time_id, const void 
 int
 HttpRequest::handle_message( const URE_Msg & msg ) {
 	uint64_t phase = msg.GetType();
-	int64_t   sub_phase = msg.GetInt64();
-	int ret = 0;
+	//int64_t   sub_phase = msg.GetInt64();
+//	int ret = 0;
 	if(phase > OC_HTTP_UNKOWN_PHASE ){
 		m_phase = phase;
 		//m_sub_phase = sub_phase;
@@ -85,7 +88,8 @@ HttpRequest::handle_message( const URE_Msg & msg ) {
 
 
 int
-handle_failed_message( const URE_Msg & msg ) {
+HttpRequest::handle_failed_message( const URE_Msg & msg )
+{
 	return 0;
 }
 
