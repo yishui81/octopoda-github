@@ -31,8 +31,11 @@ public:
    }
 
 protected:
-   SockAcceptor m_acceptor;
-   std::map<std::string, Connector*> conns;
+
+	SockAcceptor m_acceptor;
+	std::map<std::string, Connector*> conns;
+
+
 };
 
 

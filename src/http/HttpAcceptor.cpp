@@ -10,8 +10,9 @@
 #include "Acceptor.h"
 #include "Connector.h"
 #include <sys/types.h>
-#include <BaseARE/SockBase.h>
-
+#include "BaseARE/SockBase.h"
+#include "HttpConnector.h"
+#include "HttpClientSession.h"
 
 
 inline HttpAcceptOptions::HttpAcceptOptions()
@@ -151,6 +152,7 @@ HttpAcceptor::handle_open(const URE_Msg &msg)
    if(tcpDefferTimeout){
 	   m_acceptor.DefferAccept(this->tcpDefferTimeout);
    }
+
     register_handler(m_acceptor.GetHandle(), READ_MASK);
     return 0;
 }
@@ -172,10 +174,37 @@ HttpAcceptor::handle_input(URE_Handle h)
 		sockfd_t  fd = INVALID_SOCKET_HANDLE;
 
 		while( ( fd = m_acceptor.Accept( &addr )) != INVALID_SOCKET_HANDLE ) {
-				 Connector* conn = new HttpConnector();
 
-				 conn->Attach(fd);
-				 conn->EnterWorkEnv(this->GetWorkEnv());
+			//(1) 设置连接的基本参数
+			//TODO allocatte HttpConnector for mempool
+			 Connector* conn = new HttpConnector();
+			 conn->SetRemoteAddr(addr);
+			 conn->Attach(fd);
+
+			////////////////////////////////////////////////////
+			// if client address forbidden, close immediately //
+			////////////////////////////////////////////////////
+			 //(2) client address forbidden
+			 //TODO
+			 //if(add.client_ip  is forbidden){
+			 //		conn.close();
+			 //}
+
+			 //(3) copy over session related data
+			HttpClientSession *new_session = new HttpClientSession();
+
+			new_session->f_outbound_transparent = transparent;
+			new_session->f_transparent_passthrough = transparent_passthrough;
+			new_session->outbound_ip4 = this->listen_ip4;
+			new_session->outbound_ip6 = this->listen_ip6;
+			new_session->outbound_port = this->listen_port;
+
+			//new_session->host_res_style = ats_host_res_from(client_ip->sa_family, host_res_preference);
+			//new_session->acl_method_mask = acl_method_mask;
+			new_session->new_connection(Connector, backdoor);
+
+			//(4) Connection Task进入UV
+			conn->EnterWorkEnv(this->GetWorkEnv());
 		}
 	}
 	return 0;
