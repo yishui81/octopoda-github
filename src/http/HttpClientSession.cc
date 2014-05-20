@@ -266,7 +266,8 @@ HttpClientSession::do_io_write(UTaskObj * c, int64_t nbytes, IOBufferReader * bu
 void
 HttpClientSession::set_tcp_init_cwnd()
 {
-	int desired_tcp_init_cwnd = current_reader->t_state.txn_conf->server_tcp_init_cwnd;
+//	int desired_tcp_init_cwnd = current_reader->t_state.txn_conf->server_tcp_init_cwnd;
+	int desired_tcp_init_cwnd = 0;
 
 	if(desired_tcp_init_cwnd == 0) {
 		return;

@@ -1237,8 +1237,8 @@ http_parser_parse_resp(HTTPParser *parser, HdrHeap *heap, HTTPHdrImpl *hh, const
 		}
 
 		cur = line_start;
-		ink_assert((end - cur) >= 0);
-		ink_assert((end - cur) < UINT16_MAX);
+//		ink_assert((end - cur) >= 0);
+//		ink_assert((end - cur) < UINT16_MAX);
 
 		must_copy_strings = (must_copy_strings || (!line_is_real));
 

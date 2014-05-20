@@ -178,7 +178,7 @@ HttpAcceptor::handle_input(URE_Handle h)
 			//(1) 设置连接的基本参数
 			//TODO allocatte HttpConnector for mempool
 			 Connector* conn = new HttpConnector();
-			 conn->SetRemoteAddr(addr);
+			 conn->set_remote_addr(addr);
 			 conn->Attach(fd);
 
 			////////////////////////////////////////////////////
@@ -194,7 +194,7 @@ HttpAcceptor::handle_input(URE_Handle h)
 			HttpClientSession *new_session = new HttpClientSession();
 
 			new_session->f_outbound_transparent = transparent;
-			new_session->f_transparent_passthrough = transparent_passthrough;
+			new_session->_transparent_passthrough = transparent_passthrough;
 			new_session->outbound_ip4 = this->listen_ip4;
 			new_session->outbound_ip6 = this->listen_ip6;
 			new_session->outbound_port = this->listen_port;

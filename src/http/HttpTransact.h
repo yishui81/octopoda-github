@@ -882,10 +882,10 @@ public:
     bool cdn_remap_complete;
     bool first_dns_lookup;
 
-    ParentConfigParams *parent_params;
-    ParentResult parent_result;
-    HttpRequestData request_data;
-    CacheControlResult cache_control;
+//    ParentConfigParams *parent_params;
+//    ParentResult parent_result;
+//    HttpRequestData request_data;
+//    CacheControlResult cache_control;
     CacheLookupResult_t cache_lookup_result;
     // FilterResult             content_control;
     bool backdoor_request;      // internal
@@ -907,7 +907,7 @@ public:
     int next_hop_scheme;        // out
     int orig_scheme;            // pre-mapped scheme
     int method;
-    HostDBInfo host_db_info;    // in
+//    HostDBInfo host_db_info;    // in
     int cause_of_death_errno;   // in
 
     ink_time_t client_request_time;     // internal
