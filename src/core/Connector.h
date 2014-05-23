@@ -13,6 +13,69 @@
 #include "IOStream.h"
 #include "Request.h"
 
+#define EVENT_NONE                0       // 0
+#define EVENT_IMMEDIATE       1
+#define EVENT_INTERVAL          2
+#define EVENT_ERROR              3
+#define EVENT_CALL                 4     // used internally in state machines
+#define EVENT_POLL                 5     // negative event; activated on poll or epoll
+
+// Event callback return functions
+
+#define EVENT_DONE                0     // 0
+#define EVENT_CONT                1     // 1
+#define EVENT_RETURN             5
+#define EVENT_RESTART            6
+#define EVENT_RESTART_DELAYED     7
+
+
+#define CON_EVENT_NONE                  0
+#define CON_EVENT_IMMEDIATE               EVENT_IMMEDIATE
+
+
+#define  CON_EVENT_EVENTS_START                     100
+#define CON_EVENT_READ_READY              CON_EVENT_EVENTS_START
+
+/**
+  Any data in the accociated buffer *will be written* when the
+  Continuation returns.
+
+*/
+#define	CON_EVENT_WRITE_READY               (CON_EVENT_READ_READY+1)
+
+#define	CON_EVENT_READ_COMPLETE           (CON_EVENT_READ_READY+2)
+#define	CON_EVENT_WRITE_COMPLETE          (CON_EVENT_READ_READY+3)
+
+/**
+  No more data (end of stream). It should be interpreted by a
+  protocol engine as either a COMPLETE or ERROR.
+
+*/
+#define	CON_EVENT_EOS                     (CON_EVENT_READ_READY+4)
+
+#define	CON_EVENT_ERROR                   EVENT_ERROR
+
+/**
+  VC_EVENT_INACTIVITY_TIMEOUT indiates that the operation (read or write) has:
+    -# been enabled for more than the inactivity timeout period
+       (for a read, there has been space in the buffer)
+       (for a write, there has been data in the buffer)
+    -# no progress has been made
+       (for a read, no data has been read from the connection)
+       (for a write, no data has been written to the connection)
+
+*/
+#define	VC_EVENT_INACTIVITY_TIMEOUT      (VC_EVENT_EVENTS_START+5)
+
+/**
+  Total time for some operation has been exeeded, regardless of any
+  intermediate progress.
+
+*/
+#define	VC_EVENT_ACTIVE_TIMEOUT          (VC_EVENT_EVENTS_START+6)
+
+#define	VC_EVENT_OOB_COMPLETE            (VC_EVENT_EVENTS_START+7)
+
 
 enum SHUTDOWN_TYPE
 {
@@ -220,11 +283,13 @@ public:
 	virtual int handle_open  (const URE_Msg& msg);
 	virtual int handle_close (UWorkEnv * orign_uwe, long retcode);
 	virtual int handle_input (URE_Handle h);
+	virtual int handle_output(URE_Handle h);
+	virtual int handle_message(URE_Msg& msg);
 
-	virtual int32_t 	read(int64_t nbytes, MIOBuffer *buf);
-	virtual int32_t 	write(int64_t nbytes, IOBufferReader *buf, bool owner = false);
-	virtual int32_t  	close(int32_t lerrno = -1);
-	virtual int32_t  	shutdown(int32_t howto);
+	virtual int32_t 	do_io_read(UTaskObj obj, int64_t nbytes, MIOBuffer *buf);
+	virtual int32_t 	do_io_write(UTaskObj obj, int64_t nbytes, IOBufferReader *buf, bool owner = false);
+	virtual int32_t  	do_io_close(int32_t lerrno = -1);
+	virtual int32_t  	do_io_shutdown(int32_t howto);
 	virtual int32_t 	set_tcp_init_cwnd(int32_t  desired_cwnd);
 	virtual int32_t 	apply_options();
 	  /////////////////////////////////////////////////////////////////////////////////////
@@ -259,7 +324,13 @@ public:
 	virtual int64_t 	 get_socket(){ return m_stream.GetHandle();}
 	virtual int32_t      Attach(int fd){ return m_stream.Attach(fd);}
 
+	virtual int32_t      disable_read();
+	virtual int32_t      disable_write();
 
+	virtual int64_t       readv(int32_t  fd, struct iovec *vector, size_t count);
+	virtual int64_t       writev(int32_t fd, struct iovec *vector, size_t count);
+
+	virtual int64_t 	load_buffer_and_write(int64_t towrite, int64_t &wattempted, int64_t &total_wrote, MIOBufferAccessor & buf, int &needs);
 
 
 	///////////////////////////////////////////////////////////////////////////
@@ -277,8 +348,11 @@ public:
 
 protected:
 	volatile int closed;
-	//NetState read;
-	//NetState write;
+	VIO read;
+	VIO write;
+	bool read_enabled;
+	bool write_enabled;
+
 
 	int64_t		inactivity_timeout_in;
 	int64_t		active_timeout_in;

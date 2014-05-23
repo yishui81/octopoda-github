@@ -45,7 +45,7 @@ class HttpServerSession;
 
 class SecurityContext;
 
-class HttpClientSession: public UTaskObj, IOStream
+class HttpClientSession: public UTaskObj, Handle,IOStream
 {
 
 public :
@@ -59,7 +59,6 @@ public :
 
 	virtual int handle_open  (const URE_Msg& msg);
 	virtual int handle_close (UWorkEnv * orign_uwe, long retcode);
-	virtual int handle_shutdown(int32_t howto);
 	virtual int handle_wait_for_close( const TimeValue & origts, long time_id, const void * act);
 
 	//net io
@@ -76,6 +75,8 @@ public :
 	//disk io read
 	virtual int32_t  do_io_read(UTaskObj* obj, int64_t nbytes = INT64_MAX, MIOBuffer * buf = 0);
       virtual int32_t  do_io_write(UTaskObj* obj, int64_t nbytes = INT64_MAX, IOBufferReader * buf = 0, bool owner = false);
+      virtual int32_t  do_io_close(int err_no);
+      virtual int32_t  do_io_shutdown(int32_t howto);
 
 	virtual void	new_connection(Connector * new_vc, bool backdoor = false);
 	virtual void  reenable();
@@ -116,6 +117,9 @@ public :
 		user_args[ix] = arg;
 	}
 
+	void set_ure_msg(URE_Msg& msg){
+		this->cur_msg = msg;
+	}
 private:
 
 	HttpClientSession(HttpClientSession &);
@@ -165,48 +169,38 @@ private:
 
 //	VIO *						ka_vio;
 //	VIO *						slave_ka_vio;
-
-	OC_HTTP_MSG_ID 		cur_msg_id;
-	URE_Msg* 				cur_msg;
+	URE_Msg*					sm_msg;
+	OC_HTTP_MSG_ID 		cur_hook_id;
+	OC_HTTP_MSG_ID     		cur_hook;
+	int32_t 					cur_hooks;
+	URE_Msg*	 				cur_msg;
 
 //	Link<HttpClientSession> debug_link;
 
 public:
 
-	bool		backdoor_connect;
-//	int32_t		hooks_set;
+	bool			backdoor_connect;
+	SockAddr		outbound_ip4;
+	SockAddr		outbound_ip6;
 
-	/// Local address for outbound connection.
-	IpAddr		outbound_ip4;
-
-	/// Local address for outbound connection.
-	IpAddr		outbound_ip6;
-
-	/// Local port for outbound connection.
-	uint16_t	outbound_port;
-
-	/// Set outbound connection to transparent.
-	bool		 f_outbound_transparent;
+	uint16_t		outbound_port;
+	bool		 	outbound_transparent;
 
 	/// Transparently pass-through non-HTTP traffic.
-	bool 		_transparent_passthrough;
+	bool 			transparent_passthrough;
 
 	// for DI. An active connection is one that a request has
 	// been successfully parsed (PARSE_DONE) and it remains to
 	// be active until the transaction goes through or the client
 	// aborts.
-	bool		m_active;
+	bool			m_active;
 
 	/// acl method mask - cache IpAllow::match() call
-	uint32_t	acl_method_mask;
+	uint32_t		acl_method_mask;
 
-	// Session specific debug flag
-	bool		debug_on;
+	bool			debug_on;
 
-	/// DNS resolution preferences.
-	//HostResStyle host_res_style;
-
-	std::string  session_id;
+	std::string  	session_id;
 
 };
 

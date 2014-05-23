@@ -26,6 +26,7 @@
 #if !defined (_P_IOBuffer_h)
 #define _P_IOBuffer_h
 #include "libts.h"
+#include "I_IOBuffer.h"
 
 // TODO: I think we're overly aggressive here on making MIOBuffer 64-bit
 // but not sure it's worthwhile changing anything to 32-bit honestly.
@@ -620,50 +621,56 @@ IOBufferReader::block_count()
 TS_INLINE int64_t
 IOBufferReader::read_avail()
 {
-  int64_t t = 0;
-  IOBufferBlock *b = block;
+	int64_t t = 0;
+	IOBufferBlock *b = block;
 
-  while (b) {
-    t += b->read_avail();
-    b = b->next;
- }
-  t -= start_offset;
-  if (size_limit != INT64_MAX && t > size_limit)
-    t = size_limit;
-  return t;
+	while (b) {
+		t += b->read_avail();
+		b = b->next;
+	}
+
+	t -= start_offset;
+	if (size_limit != INT64_MAX && t > size_limit){
+		t = size_limit;
+	}
+	return t;
 }
 
 inline bool
 IOBufferReader::is_read_avail_more_than(int64_t size)
 {
-  int64_t t = -start_offset;
-  IOBufferBlock* b = block;
-  while (b) {
-    t += b->read_avail();
-    if (t > size) {
-      return true;
-    }
-    b = b->next;
-  }
-  return false;
+	int64_t t = -start_offset;
+	IOBufferBlock* b = block;
+	while (b) {
+		t += b->read_avail();
+		if (t > size) {
+			return true;
+		}
+		b = b->next;
+	}
+	return false;
 }
 
 TS_INLINE void
 IOBufferReader::consume(int64_t n)
 {
   start_offset += n;
-  if (size_limit != INT64_MAX)
+  if (size_limit != INT64_MAX){
     size_limit -= n;
+ }
+
   ink_assert(size_limit >= 0);
-  if (block == 0)
-    return;
+  if (block == 0){
+	  return;
+  }
+
   int64_t r = block->read_avail();
   int64_t s = start_offset;
   while (r <= s && block->next && block->next->read_avail()) {
-    s -= r;
-    start_offset = s;
-    block = block->next;
-    r = block->read_avail();
+		s -= r;
+		start_offset = s;
+		block = block->next;
+		r = block->read_avail();
   }
   ink_assert(read_avail() >= 0);
 }

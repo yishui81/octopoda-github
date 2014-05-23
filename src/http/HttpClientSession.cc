@@ -25,8 +25,7 @@
 #include "ink_config.h"
 #include "Allocator.h"
 #include "HttpClientSession.h"
-#include "HttpSM.h"
-#include "HttpDebugNames.h"
+#include "HttpStateMachine.h"
 #include "HttpServerSession.h"
 #include "BaseARE/SockStream.h"
 #include "ts/I_IOBuffer.h"
@@ -62,14 +61,13 @@ HttpClientSession::HttpClientSession()
 			proxy_allocated(false),
 			backdoor_connect(false),
 			outbound_port(0),
-			f_outbound_transparent(false),
-			_transparent_passthrough(false),
+			outbound_transparent(false),
+			transparent_passthrough(false),
 			sm_reader(NULL),
 			acl_method_mask(0),
 			m_active(false),
 			debug_on(false),
-			cur_msg(NULL),
-			cur_msg_id(0)
+			cur_msg(NULL)
 {
 
 	memset(user_args, 0, sizeof(user_args));
@@ -78,10 +76,6 @@ HttpClientSession::HttpClientSession()
 void
 HttpClientSession::cleanup()
 {
-
-	ink_release_assert(client_vc == NULL);
-	ink_release_assert(bound_ss == NULL);
-	ink_assert(read_buffer);
 	magic = HTTP_CS_MAGIC_DEAD;
 	if (read_buffer) {
 		free_MIOBuffer(read_buffer);
@@ -110,52 +104,8 @@ HttpClientSession::handle_open  (const URE_Msg& msg)
 int
 HttpClientSession::handle_close (UWorkEnv * orign_uwe, long retcode)
 {
-
-	if (read_state == HCS_ACTIVE_READER) {
-
-		if (m_active) {
-			m_active = false;
-		}
-	}
-
-	// Prevent double closing
-	ink_release_assert(read_state != HCS_CLOSED);
-
-	// If we have an attached server session, release
-	//   it back to our shared pool
-	if (bound_ss) {
-		bound_ss->release();
-		bound_ss = NULL;
-	}
-
-	if (half_close) {
-
-		read_state = HCS_HALF_CLOSED;
-//		SET_HANDLER(&HttpClientSession::state_wait_for_close);
-
-		client_vc->shutdown(IO_SHUTDOWN_WRITE);
-
-		client_vc->read(INT64_MAX, read_buffer);
-
-		sm_reader->consume(sm_reader->read_avail());
-
-//		client_vc->set_active_timeout()
-
-//		client_vc->set_active_timeout(HRTIME_SECONDS(current_reader->t_state.txn_conf->keep_alive_no_activity_timeout_out));
-
-
-	} else {
-
-		read_state = HCS_CLOSED;
-		client_vc->close(0);
-		client_vc->handle_close(GetWorkEnv(),0);
-		//client_vc->do_io_close(alerrno);
-
-		client_vc = NULL;
-		conn_decrease = false;
-
-		do_api_callout(OC_HTTP_SSN_CLOSE_HOOK);
-	}
+	cleanup();
+	httpClientSessionAllocator.free(this);
 	return 0;
 }
 
@@ -182,15 +132,23 @@ HttpClientSession::handle_timeout( const TimeValue & origts, long time_id, const
 int
 HttpClientSession::handle_message( const URE_Msg & msg )
 {
+	int64_t hook_id = msg.GetType();
+	int64_t event 	  = msg.GetInt64();
+
+	if(hook_id == cur_hook_id  && event != HTTP_ERROR){
+		state_api_callout(0, NULL);
+	}
+
 	if (backdoor_connect == 0)
 	{
 		state_api_callout(0, NULL);
-//		SET_HANDLER(&HttpClientSession::state_api_callout);
-//		cur_hook = NULL;
-//		cur_hooks = 0;
-	} else {
-	//	handle_api_return(HTTP_API_CONTINUE);
+		set_handler(&HttpClientSession::state_api_callout);
+
+	} else
+	{
+		handle_api_return(HTTP_CONTINUE);
 	}
+
 	return 0;
 }
 
@@ -210,20 +168,39 @@ HttpClientSession::new_transaction()
 	current_reader = HttpStateMachine::allocate();
 	current_reader->init();
 	transact_count++;
-	//DebugSsn("http_cs", "[%s ] Starting transaction %d using sm [%" PRId64 "]", session_id, transact_count, current_reader->sm_id);
-
 	current_reader->attach_client_session(this, sm_reader);
+	sm_msg = new URE_Msg(current_reader->GetUTOID(), GetUTOID());
+	current_reader->EnterWorkEnv(GetWorkEnv());
 }
 
 inline void
 HttpClientSession::do_api_callout(const URE_Msg& msg)
 {
 	uint64_t type = msg.GetType();
+	int64_t  event = msg.GetInt64();
+
 	switch(type){
+
 	case OC_HTTP_SSN_START_HOOK:
+
+		if (event != HTTP_ERROR) {
+			new_transaction();
+		} else {
+			do_io_close(0);
+		}
+		break;
+
 	case OC_HTTP_SSN_CLOSE_HOOK:
+
+		handle_close(GetWorkEnv(), 0);
+		break;
+
 	default:
+
+		ink_release_assert(0);
+		break;
 	}
+
 }
 
 void
@@ -237,7 +214,7 @@ HttpClientSession::new_connection(Connector * new_vc, bool backdoor)
 
 	conn_decrease = true;
 
-	read_buffer = new_MIOBuffer(HTTP_HEADER_BUFFER_SIZE_INDEX);
+	read_buffer = new_MIOBuffer(BUFFER_SIZE_INDEX_4K);
 	sm_reader = read_buffer->alloc_reader();
 
 	do_api_callout(OC_HTTP_SSN_START_HOOK);
@@ -248,19 +225,69 @@ HttpClientSession::new_connection(Connector * new_vc, bool backdoor)
 int32_t
 HttpClientSession::do_io_read(UTaskObj * c, int64_t nbytes, MIOBuffer * buf)
 {
-	  return client_vc->read( nbytes, buf);
+	  return client_vc->do_io_read( c, nbytes, buf);
 }
 
 int32_t
 HttpClientSession::do_io_write(UTaskObj * c, int64_t nbytes, IOBufferReader * buf, bool owner)
 {
-	  /* conditionally set the tcp initial congestion window
-		 before our first write. */
+	  /* conditionally set the tcp initial congestion window before our first write. */
 	  if(!tcp_init_cwnd_set) {
 			tcp_init_cwnd_set = true;
 			set_tcp_init_cwnd();
 	  }
-	  return client_vc->write(nbytes, buf, owner);
+	  return client_vc->do_io_write(c, nbytes, buf, owner);
+}
+
+int32_t
+HttpClientSession::do_io_close(int32_t errr_no){
+
+	if (read_state == HCS_ACTIVE_READER) {
+
+		if (m_active) {
+			m_active = false;
+		}
+
+	}
+
+	// Prevent double closing
+	ink_release_assert(read_state != HCS_CLOSED);
+
+	if (half_close) {
+
+		read_state = HCS_HALF_CLOSED;
+
+		set_handler(&HttpClientSession::state_wait_for_close);
+
+		client_vc->do_io_shutdown(IO_SHUTDOWN_WRITE);
+
+		client_vc->do_io_read(this, INT64_MAX, read_buffer);
+
+		sm_reader->consume(sm_reader->read_avail());
+
+//		client_vc->set_active_timeout()
+
+//		client_vc->set_active_timeout(HRTIME_SECONDS(current_reader->t_state.txn_conf->keep_alive_no_activity_timeout_out));
+
+
+	} else {
+
+		read_state = HCS_CLOSED;
+		client_vc->do_io_close(errr_no);
+
+		client_vc = NULL;
+		conn_decrease = false;
+		do_api_callout(OC_HTTP_SSN_CLOSE_HOOK);
+
+	}
+
+	return 0;
+}
+
+int32_t
+HttpClientSession::do_io_shutdown(int32_t howto)
+{
+	return client_vc->do_io_shutdown(howto);
 }
 
 void
@@ -274,192 +301,52 @@ HttpClientSession::set_tcp_init_cwnd()
 	}
 
 	if(client_vc->set_tcp_init_cwnd(desired_tcp_init_cwnd) != 0){
-
+		//TODO
 	}
 }
 
+
 int32_t
-HttpClientSession::handle_shutdown(int32_t howto)
-{
-	return client_vc->shutdown(howto);
-}
-
-
-int
 HttpClientSession::state_wait_for_close(int event, void *data)
 {
-
-	//STATE_ENTER(&HttpClientSession::state_wait_for_close, event, data);
-
-//	ink_assert(data == ka_vio);
-	ink_assert(read_state == HCS_HALF_CLOSED);
-
 	switch (event) {
-//	case VC_EVENT_EOS:
-//	case VC_EVENT_ERROR:
-//	case VC_EVENT_ACTIVE_TIMEOUT:
-//	case VC_EVENT_INACTIVITY_TIMEOUT:
+
+	case CON_EVENT_EOS:
+	case CON_EVENT_ERROR:
+
 		half_close = false;
-		this->handle_close(GetWorkEnv(), 0);
+		handle_close(GetWorkEnv(), 0);
 		break;
-//	case VC_EVENT_READ_READY:
+
+	case CON_EVENT_READ_READY:
+
 		// Drain any data read
 		sm_reader->consume(sm_reader->read_avail());
 		break;
+
 	default:
+
 		ink_release_assert(0);
 		break;
+
 	}
 	return 0;
 }
 
-int
-HttpClientSession::state_slave_keep_alive(int event, void *data)
-{
-
-  //STATE_ENTER(&HttpClientSession::state_slave_keep_alive, event, data);
-
- // ink_assert(data == slave_ka_vio);
-  //ink_assert(bound_ss != NULL);
-
-  switch (event) {
-		default:
-	//	case VC_EVENT_READ_COMPLETE:
-	//		// These events are bogus
-	//		ink_assert(0);
-	//	/* Fall Through */
-	//	case VC_EVENT_ERROR:
-	//	case VC_EVENT_READ_READY:
-	//	case VC_EVENT_EOS:
-	//		// The server session closed or something is amiss
-	//		bound_ss->do_io_close();
-	//		bound_ss = NULL;
-	//		slave_ka_vio = NULL;
-	//		break;
-	//
-	//	case VC_EVENT_ACTIVE_TIMEOUT:
-	//	case VC_EVENT_INACTIVITY_TIMEOUT:
-	//		// Timeout - place the session on the shared pool
-	//		bound_ss->release();
-	//		bound_ss = NULL;
-	//		slave_ka_vio = NULL;
-	//		break;
-	}
-
-	return 0;
-}
-
-int
-HttpClientSession::state_keep_alive(int event, void *data)
-{
-	// Route the event.  It is either for client vc or
-	//  the origin server slave vc
-//	if (data && data == slave_ka_vio) {
-
-		  return state_slave_keep_alive(event, data);
-
-//	} else {
-
-//		ink_assert(data && data == ka_vio);
-		ink_assert(read_state == HCS_KEEP_ALIVE);
-
-//	}
-
-	//STATE_ENTER(&HttpClientSession::state_keep_alive, event, data);
-
-	switch (event) {
-	//	  case VC_EVENT_READ_READY:
-	//			// New transaction, need to spawn of new sm to process
-	//			// request
-	//			new_transaction();
-	//			break;
-	//
-	//	  case VC_EVENT_EOS:
-	//			// If there is data in the buffer, start a new
-	//			//  transaction, otherwise the client gave up
-	//			if (sm_reader->read_avail() > 0) {
-	//			  new_transaction();
-	//			} else {
-	//			  this->do_io_close();
-	//			}
-	//			break;
-	//
-	//	  case VC_EVENT_READ_COMPLETE:
-	//	  default:
-	//			// These events are bogus
-	//			ink_assert(0);
-	//			// Fall through
-	//	  case VC_EVENT_ERROR:
-	//	  case VC_EVENT_ACTIVE_TIMEOUT:
-	//	  case VC_EVENT_INACTIVITY_TIMEOUT:
-	//			// Keep-alive timed out
-	//			handle_close(this->uwe, 0);
-	//			break;
-	  }
-
-	return 0;
-}
 
 int
 HttpClientSession::state_api_callout(int event, void * /* data ATS_UNUSED */)
 {
 	switch (event) {
-//	case EVENT_NONE:
-//	case EVENT_INTERVAL:
-//	case HTTP_API_CONTINUE:
-//		if ((cur_hook_id >= 0) && (cur_hook_id < TS_HTTP_LAST_HOOK)) {
-//			if (!cur_hook) {
-//				if (cur_hooks == 0) {
-//					cur_hook = http_global_hooks->get(cur_hook_id);
-//					cur_hooks++;
-//				}
-//			}
-//			if (!cur_hook) {
-//				if (cur_hooks == 1) {
-//					cur_hook = api_hooks.get(cur_hook_id);
-//					cur_hooks++;
-//				}
-//			}
-//
-//			if (cur_hook) {
-//
-//				bool plugin_lock;
-////				Ptr<ProxyMutex> plugin_mutex;
-//
-//				if (cur_hook->m_cont->mutex) {
-//					plugin_mutex = cur_hook->m_cont->mutex;
-//					plugin_lock = MUTEX_TAKE_TRY_LOCK(cur_hook->m_cont->mutex, mutex->thread_holding);
-//
-//					if (!plugin_lock) {
-//						SET_HANDLER(&HttpClientSession::state_api_callout);
-//						mutex->thread_holding->schedule_in(this, HRTIME_MSECONDS(10), ET_NET);
-//						return 0;
-//					}
-//
-//				} else {
-//					plugin_lock = false;
-//				}
-//
-//				APIHook *hook = cur_hook;
-//				cur_hook = cur_hook->next();
-//
-//				hook->invoke(TS_EVENT_HTTP_READ_REQUEST_HDR + cur_hook_id, this);
-//
-//				if (plugin_lock) {
-//					// BZ 51246
-//					Mutex_unlock(plugin_mutex, this_ethread());
-//				}
-//
-//				return 0;
-//			}
-//		}
-//
-//		handle_api_return(event);
-//		break;
-//
-//	default:
-//		ink_assert(false);
-//	case HTTP_API_ERROR:
+	case CON_EVENT_NONE:
+	case EVENT_INTERVAL:
+	case HTTP_CONTINUE:
+		handle_api_return(event);
+		break;
+
+	default:
+		ink_assert(false);
+	case HTTP_ERROR:
 		handle_api_return(event);
 		break;
 	}
@@ -470,26 +357,25 @@ HttpClientSession::state_api_callout(int event, void * /* data ATS_UNUSED */)
 void
 HttpClientSession::handle_api_return(int event)
 {
-	//SET_HANDLER(&HttpClientSession::state_api_callout);
-	cur_msgs = 0;
-
-	switch (cur_msg_id) {
+	switch (cur_hook_id) {
 
 	case OC_HTTP_SSN_START_HOOK:
 
-		//if (event != HTTP_API_ERROR) {
+		if (event != HTTP_ERROR) {
 			new_transaction();
-		//} else {
+		} else {
 			handle_close(GetWorkEnv(), 0);
 			return;
-		//}
+		}
 		break;
 
 	case OC_HTTP_SSN_CLOSE_HOOK:
-		destroy();
+
+		handle_close(GetWorkEnv(), 0);
 		break;
 
 	default:
+
 		ink_release_assert(0);
 		break;
 	}
@@ -498,7 +384,7 @@ HttpClientSession::handle_api_return(int event)
 void
 HttpClientSession::reenable()
 {
-//	client_vc->reenable(vio);
+	//client_vc->reenable(vio);
 }
 
 void
@@ -525,8 +411,7 @@ HttpClientSession::release(IOBufferReader * r)
 	//  correct buffer reader
 	ink_assert(r == sm_reader);
 	if (r != sm_reader) {
-		//this->do_io_close();
-		this->handle_close(GetWorkEnv(), 0);
+		this->do_io_close(0);
 		return;
 	}
 
@@ -537,10 +422,10 @@ HttpClientSession::release(IOBufferReader * r)
 	} else {
 
 		read_state = HCS_KEEP_ALIVE;
-//		SET_HANDLER(&HttpClientSession::state_keep_alive);
-//		ka_vio = this->do_io_read(this, INT64_MAX, read_buffer);
-//		ink_assert(slave_ka_vio != ka_vio);
-//
+		set_handler(&HttpClientSession::state_keep_alive);
+
+		do_io_read(this, INT64_MAX, read_buffer);
+////		ink_assert(slave_ka_vio != ka_vio);
 //		client_vc->set_inactivity_timeout(HRTIME_SECONDS(ka_in));
 //		client_vc->cancel_active_timeout();
 	}
