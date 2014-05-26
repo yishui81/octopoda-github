@@ -13,7 +13,16 @@
 
 #include "libts.h"
 #include "BaseARE/UTaskObj.h"
+#include "I_IOBuffer.h"
 //#include "P_EventSystem.h"
+
+static const int max_chunked_ahead_blocks = 128;
+static const int min_block_transfer_bytes = 256;
+static char const * const CHUNK_HEADER_FMT = "%" PRIx64"\r\n";
+// This should be as small as possible because it will only hold the
+// header and trailer per chunk - the chunk body will be a reference to
+// a block in the input stream.
+static int const CHUNK_IOBUFFER_SIZE_INDEX = MIN_IOBUFFER_SIZE;
 
 // Get rid of any previous definition first... /leif
 #ifdef MAX_PRODUCERS

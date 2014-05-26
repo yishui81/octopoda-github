@@ -28,7 +28,7 @@
 #include "HdrUtils.h"
 #include "HttpCompat.h"
 
-#include "I_Machine.h"
+//#include "I_Machine.h"
 
 bool
 HttpTransactHeaders::is_method_cacheable(int method)

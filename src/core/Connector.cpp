@@ -9,12 +9,13 @@
 #include "ink_sock.h"
 #include "I_IOBuffer.h"
 #include <bits/uio.h>
+#include "BaseARE/UTaskObj.h"
 
 enum{
 	OC_NET_EVENT_IN = 5000, //读数据
-	OC_NET_EVENT_OUT,      //写数据
-	OC_NET_EVENT_CLOSE, //关闭网络
-	OC_CONN_CLOSE  //销毁Connector
+	OC_NET_EVENT_OUT,      	//写数据
+	OC_NET_EVENT_CLOSE, 		//关闭网络
+	OC_CONN_CLOSE  			//销毁Connector
 }
 
 Connector::Connector()
@@ -38,7 +39,7 @@ Connector::~Connector()
 }
 
 int32_t
-Connector::do_io_read(UTaskObj obj, int64_t nbytes, MIOBuffer *buf)
+Connector::do_io_read(UTaskObj* obj, int64_t nbytes, MIOBuffer *buf)
 {
 	ink_assert(!closed);
 
@@ -64,7 +65,7 @@ Connector::do_io_read(UTaskObj obj, int64_t nbytes, MIOBuffer *buf)
 }
 
 int32_t
-Connector::do_io_write(UTaskObj obj,int64_t nbytes, IOBufferReader *reader, bool owner = false)
+Connector::do_io_write(UTaskObj* obj,int64_t nbytes, IOBufferReader *reader, bool owner = false)
 {
 	int32_t  ret = 0;
 	write.op = VIO::WRITE;
@@ -84,7 +85,6 @@ Connector::do_io_write(UTaskObj obj,int64_t nbytes, IOBufferReader *reader, bool
 	} else {
 
 		disable_write();
-
 	}
 	return ret;
 }
@@ -92,12 +92,14 @@ Connector::do_io_write(UTaskObj obj,int64_t nbytes, IOBufferReader *reader, bool
 int
 Connector::handle_open(const URE_Msg &msg)
 {
+	//TODO
 	return 0;
 }
 
 int
 Connector::handle_close(UWorkEnv * orign_uwe, long retcode)
 {
+	//TODO
 	return 0;
 }
 
@@ -149,17 +151,21 @@ Connector::handle_input(URE_Handle h)
 
 			int64_t a = b->write_avail();
 			if (a > 0) {
+
 				tiovec[niov].iov_base = b->_end;
 				int64_t togo = toread - total_read - rattempted;
 				if (a > togo){
 					a = togo;
 				}
+
 				tiovec[niov].iov_len = a;
 				rattempted += a;
 				niov++;
+
 				if (a >= togo){
 					break;
 				}
+
 			}
 			b = b->next;
 		}
@@ -199,13 +205,12 @@ Connector::handle_input(URE_Handle h)
 		}
 
 		if (!r || r == -ECONNRESET) {
-			notify_int64(read._cont->GetUTOID(), CON_EVENT_EOS , 0,  NULL);
-			//read_signal_done(VC_EVENT_EOS, nh, vc);
+			read_signal_done(CONN_EVENT_EOS);
 			return 0;
 
 		}
 
-		read_signal_error(nh, vc, (int)-r);
+		read_signal_error((int)-r);
 		return 0;
 	}
 	//  NET_SUM_DYN_STAT(net_read_bytes_stat, r);
@@ -213,30 +218,27 @@ Connector::handle_input(URE_Handle h)
 	// Add data to buffer and signal continuation.
 	buf.writer()->fill(r);
 	read.ndone += r;
-	net_activity(vc, thread);
+	//net_activity();
 
 	// Signal read ready, check if user is not done
 
 	// If there are no more bytes to read, signal read complete
 	ink_assert(ntodo >= 0);
 	if (read.ntodo() <= 0) {
-
-		 notify_int64(read._cont->GetUTOID(), CON_EVENT_READ_COMPLETE , 0,  NULL);
-//	       read_signal_done(VC_EVENT_READ_COMPLETE, nh, vc);
+	    read_signal_done(CON_EVENT_READ_COMPLETE);
 		 Debug("iocore_net", "read_from_net, read finished - signal done");
 		 return 0;
 
 	} else {
-		 notify_int64(read._cont->GetUTOID(), CON_EVENT_READ_READY , 0,  NULL);
-		  if (read_signal_and_update(VC_EVENT_READ_READY, vc) != EVENT_CONT){
-			return 0;
+		  if (read_signal_and_update(CON_EVENT_READ_READY) != EVENT_CONT){
+			  return 0;
 		  }
 
 		  // change of lock... don't look at shared variables!
-		  if (lock.m.m_ptr != s->vio.mutex.m_ptr) {
-			read_reschedule(nh, vc);
+//		  if (lock.m.m_ptr != s->vio.mutex.m_ptr) {
+			read_reschedule();
 			return 0;
-		  }
+//		  }
 	}
 
 
@@ -247,6 +249,7 @@ end:
 		return 0;
 	}
 
+	read_reschedule();
 //	read_reschedule(nh, vc);
 	return 0;
 }
@@ -280,10 +283,10 @@ Connector::handle_output(URE_Handle h)
 	  // signal write ready to allow user to fill the buffer
 	if (towrite != ntodo && buf.writer()->write_avail()) {
 
-		notify_int64(read._cont->GetUTOID(), CON_EVENT_WRITE_READY , 0,  NULL);
-//		if (write_signal_and_update(VC_EVENT_WRITE_READY, vc) != EVENT_CONT) {
-//			return 0;
-//		}
+//		notify_int64(read._cont->GetUTOID(), CON_EVENT_WRITE_READY , 0,  NULL);
+		if (write_signal_and_update(CON_EVENT_WRITE_READY) != EVENT_CONT) {
+			return 0;
+		}
 
 		ntodo = write.ntodo();
 		if (ntodo <= 0) {
@@ -329,29 +332,24 @@ Connector::handle_output(URE_Handle h)
 
 			//NET_DEBUG_COUNT_DYN_STAT(net_calls_to_write_nodata_stat, 1);
 			if((needs & WRITE_MASK) == WRITE_MASK) {
-				vc->write.triggered = 0;
-				nh->write_ready_list.remove(vc);
-				write_reschedule(nh, vc);
+				write_reschedule();
 			}
 
 			if((needs & READ_MASK) == READ_MASK) {
-				vc->read.triggered = 0;
-				nh->read_ready_list.remove(vc);
-				read_reschedule(nh, vc);
+				read_reschedule();
 			}
 
 			return 0;
 		}
 
 		if (!r || r == -ECONNRESET) {
-			//vc->write.triggered = 0;
+
 			notify_int64(read._cont->GetUTOID(), CON_EVENT_EOS , 0,  NULL);
-			//write_signal_done(VC_EVENT_EOS, nh, vc);
 			return 0;
 		}
 
 		//vc->write.triggered = 0;
-		//write_signal_error(nh, vc, (int)-r);
+		write_signal_error((int)-r);
 		return 0;
 
 	} else {
@@ -362,7 +360,7 @@ Connector::handle_output(URE_Handle h)
 		ink_assert(buf.reader()->read_avail() >= 0);
 		write.ndone += r;
 
-		net_activity(vc, thread);
+		net_activity();
 		// If there are no more bytes to write, signal write complete,
 		ink_assert(ntodo >= 0);
 		if (write.ntodo() <= 0) {
@@ -373,15 +371,15 @@ Connector::handle_output(URE_Handle h)
 					;
 		} else if (!signalled) {
 
-			if (write_signal_and_update(VC_EVENT_WRITE_READY, vc) != EVENT_CONT) {
+			if (write_signal_and_update(CON_EVENT_WRITE_READY) != EVENT_CONT) {
 				return 0;
 			}
 
 			// change of lock... don't look at shared variables!
-			if (lock.m.m_ptr != s->vio.mutex.m_ptr) {
-				write_reschedule(nh, vc);
+			//if (lock.m.m_ptr != s->vio.mutex.m_ptr) {
+				write_reschedule();
 				return 0;
-			}
+			//}
 		}
 
 		if (!buf.reader()->read_avail()) {
@@ -390,10 +388,10 @@ Connector::handle_output(URE_Handle h)
 		}
 
 		if((needs & WRITE_MASK) == WRITE_MASK) {
-			write_reschedule(nh, vc);
+			write_reschedule();
 		}
 		if((needs & READ_MASK) == READ_MASK) {
-			read_reschedule(nh, vc);
+			read_reschedule();
 		}
 		return 0;
 	}
@@ -592,7 +590,6 @@ Connector::load_buffer_and_write(int64_t towrite, int64_t &wattempted, int64_t &
 			result = m_stream.Send((char*)tiovec[0].iov_base, tiovec[0].iov_len);
 		} else{
 			result = this->writev((int)m_stream.GetHandle(), &tiovec[0], niov);
-			//r = socketManager.writev(con.fd, &tiovec[0], niov);
 		}
 
 	} while (result == wattempted && total_wrote < towrite);
@@ -602,3 +599,82 @@ Connector::load_buffer_and_write(int64_t towrite, int64_t &wattempted, int64_t &
 	return (result);
 }
 
+
+inline int32_t
+Connector::read_signal_and_update(int event)
+{
+  recursion++;
+  notify_int64(read._cont->GetUTOID(), 0 , event , NULL);
+  if (!recursion && closed) {
+    return EVENT_DONE;
+  } else {
+    return EVENT_CONT;
+  }
+}
+
+
+inline int32_t
+Connector::write_signal_and_update(int event)
+{
+  recursion++;
+  notify_int64(write._cont->GetUTOID(), 0, event, NULL);
+  if (!recursion && closed) {
+    return EVENT_DONE;
+  } else {
+    return EVENT_CONT;
+  }
+}
+
+inline int32_t
+Connector::read_signal_done(int event)
+{
+  read_enabled = 0;
+  if (read_signal_and_update(event) == EVENT_DONE) {
+    return EVENT_DONE;
+  } else {
+    read_reschedule();
+    return EVENT_CONT;
+  }
+}
+
+inline int32_t
+Connector::write_signal_done(int event)
+{
+  write_enabled = 0;
+  if (write_signal_and_update(event) == EVENT_DONE) {
+    return EVENT_DONE;
+  } else {
+    write_reschedule();
+    return EVENT_CONT;
+  }
+}
+
+inline int32_t
+Connector::read_signal_error(int lerrno)
+{
+  return read_signal_done(CON_EVENT_ERROR);
+}
+
+inline int32_t
+Connector::write_signal_error(int lerrno)
+{
+  return write_signal_done(CON_EVENT_ERROR);
+}
+
+inline int32_t
+Connector::write_reschedule()
+{
+	return notify_int64(GetUTOID(), OC_NET_EVENT_OUT, 0, NULL);
+}
+
+inline int32_t
+Connector::read_reschedule()
+{
+	return notify_int64(GetUTOID(), OC_NET_EVENT_IN, 0, NULL);
+}
+
+inline int32_t
+Connector::net_activity()
+{
+	return 0;
+}

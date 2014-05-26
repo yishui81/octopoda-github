@@ -43,8 +43,8 @@
 #include "ink_config.h"
 #include "HttpConfig.h"
 #include "HttpTunnel.h"
-#include "HttpSM.h"
-#include "HttpDebugNames.h"
+#include "HttpStateMachine.h"
+//#include "HttpDebugNames.h"
 #include "ParseRules.h"
 #include "stdio.h"
 

@@ -74,16 +74,17 @@ public :
 
 	//disk io read
 	virtual int32_t  do_io_read(UTaskObj* obj, int64_t nbytes = INT64_MAX, MIOBuffer * buf = 0);
-      virtual int32_t  do_io_write(UTaskObj* obj, int64_t nbytes = INT64_MAX, IOBufferReader * buf = 0, bool owner = false);
-      virtual int32_t  do_io_close(int err_no);
-      virtual int32_t  do_io_shutdown(int32_t howto);
+	virtual int32_t  do_io_write(UTaskObj* obj, int64_t nbytes = INT64_MAX, IOBufferReader * buf = 0, bool owner = false);
+	virtual int32_t  do_io_close(int err_no);
+	virtual int32_t  do_io_shutdown(int32_t howto);
 
-	virtual void	new_connection(Connector * new_vc, bool backdoor = false);
+	virtual void  attach_connector(Connector * new_vc, bool backdoor = false);
 	virtual void  reenable();
 	virtual void  release(IOBufferReader * r);
 	virtual void  attach_server_session(HttpServerSession * ssession, bool transaction_done = true);
 
 public :
+
 	void 	 set_half_close_flag()
 	{
 		half_close = true;
@@ -100,7 +101,10 @@ public :
 	}
 
 	// Used for the cache authenticated HTTP content feature
-	HttpServerSession *get_bound_ss();
+	HttpServerSession *get_bound_ss()
+	{
+		 return bound_ss;
+	}
 
 	int32_t	get_transact_count() const
 	{
@@ -117,9 +121,7 @@ public :
 		user_args[ix] = arg;
 	}
 
-	void set_ure_msg(URE_Msg& msg){
-		this->cur_msg = msg;
-	}
+
 private:
 
 	HttpClientSession(HttpClientSession &);
@@ -131,9 +133,7 @@ private:
 
 	void 	set_tcp_init_cwnd();
 	void 	handle_api_return(int event);
-
-
-	void do_api_callout(const URE_Msg& msg);
+	void  do_api_callout(const URE_Msg& msg);
 
 	virtual void new_transaction();
 
@@ -153,27 +153,26 @@ private:
 	int64_t 	transact_count;
 	bool		half_close;
 	bool 		conn_decrease;
-	void *		user_args[HTTP_SSN_TXN_MAX_USER_ARG];
+	void *	user_args[HTTP_SSN_TXN_MAX_USER_ARG];
 	int32_t 	cur_msgs;
 	bool		proxy_allocated;
 
 private:
 
-	Connector *				client_vc;
+	Connector *					client_vc;
 	HttpServerSession *		bound_ss;
 
-	MIOBuffer *				read_buffer;
+	MIOBuffer *					read_buffer;
 	IOBufferReader *			sm_reader;
 	HttpStateMachine *		current_reader;
 	C_Read_State 				read_state;
 
-//	VIO *						ka_vio;
-//	VIO *						slave_ka_vio;
-	URE_Msg*					sm_msg;
-	OC_HTTP_MSG_ID 		cur_hook_id;
-	OC_HTTP_MSG_ID     		cur_hook;
-	int32_t 					cur_hooks;
-	URE_Msg*	 				cur_msg;
+	//	VIO *						ka_vio;
+	//	VIO *						slave_ka_vio;
+	URE_Msg						session_msg;
+	int64_t 						current_hook;
+	int32_t					   current_step;
+	URE_Msg						sm_msg;
 
 //	Link<HttpClientSession> debug_link;
 
@@ -200,7 +199,7 @@ public:
 
 	bool			debug_on;
 
-	std::string  	session_id;
+	char  	   session_id[128];
 
 };
 

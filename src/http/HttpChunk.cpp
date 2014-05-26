@@ -6,6 +6,8 @@
  */
 
 #include "HttpChunk.h"
+#include "Connector.h"
+#include <stdio.h>
 
 ChunkedHandler::ChunkedHandler()
 		  : chunked_reader(NULL),
@@ -19,7 +21,7 @@ ChunkedHandler::ChunkedHandler()
 			state(CHUNK_READ_CHUNK),
 			cur_chunk_size(0),
 			bytes_left(0),
-			last_server_event(VC_EVENT_NONE),
+			last_server_event(CON_EVENT_NONE),
 			running_sum(0),
 			num_digits(0),
 			max_chunk_size(DEFAULT_MAX_CHUNK_SIZE),

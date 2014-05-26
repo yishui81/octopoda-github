@@ -67,7 +67,9 @@ HttpClientSession::HttpClientSession()
 			acl_method_mask(0),
 			m_active(false),
 			debug_on(false),
-			cur_msg(NULL)
+			current_hook(0),
+			current_step(0)
+			//cur_msg(NULL)
 {
 
 	memset(user_args, 0, sizeof(user_args));
@@ -98,6 +100,19 @@ HttpClientSession::allocate()
 int
 HttpClientSession::handle_open  (const URE_Msg& msg)
 {
+	session_msg = msg;
+	session_msg.SetType(OC_HTTP_SSN_START_HOOK); //set hook
+	session_msg.SetInt64(0);  							//set step;
+	session_msg.SetInt(0);								//event
+	magic = HTTP_CS_MAGIC_ALIVE;
+
+	conn_decrease = true;
+
+	read_buffer = new_MIOBuffer(BUFFER_SIZE_INDEX_4K);
+	sm_reader = read_buffer->alloc_reader();
+
+	do_api_callout(OC_HTTP_SSN_START_HOOK);
+
 	return 0;
 }
 
@@ -105,6 +120,7 @@ int
 HttpClientSession::handle_close (UWorkEnv * orign_uwe, long retcode)
 {
 	cleanup();
+	client_vc->handle_close(client_vc->GetWorkEnv(), 0);
 	httpClientSessionAllocator.free(this);
 	return 0;
 }
@@ -132,10 +148,12 @@ HttpClientSession::handle_timeout( const TimeValue & origts, long time_id, const
 int
 HttpClientSession::handle_message( const URE_Msg & msg )
 {
-	int64_t hook_id = msg.GetType();
-	int64_t event 	  = msg.GetInt64();
 
-	if(hook_id == cur_hook_id  && event != HTTP_ERROR){
+	int64_t hook_id = msg.GetType();
+	int64_t event = 	msg.GetInt64();
+
+	if(hook_id == current_hook && event != HTTP_ERROR)
+	{
 		state_api_callout(0, NULL);
 	}
 
@@ -143,8 +161,8 @@ HttpClientSession::handle_message( const URE_Msg & msg )
 	{
 		state_api_callout(0, NULL);
 		set_handler(&HttpClientSession::state_api_callout);
-
-	} else
+	}
+	else
 	{
 		handle_api_return(HTTP_CONTINUE);
 	}
@@ -169,8 +187,10 @@ HttpClientSession::new_transaction()
 	current_reader->init();
 	transact_count++;
 	current_reader->attach_client_session(this, sm_reader);
-	sm_msg = new URE_Msg(current_reader->GetUTOID(), GetUTOID());
-	current_reader->EnterWorkEnv(GetWorkEnv());
+	sm_msg = URE_Msg(current_reader->GetUTOID(), GetUTOID());
+	sm_msg.SetType(OC_HTTP_TXN_START_HOOK);
+	sm_msg.SetInt64(0);
+	current_reader->EnterWorkEnv(GetWorkEnv(), sm_msg);
 }
 
 inline void
@@ -204,21 +224,10 @@ HttpClientSession::do_api_callout(const URE_Msg& msg)
 }
 
 void
-HttpClientSession::new_connection(Connector * new_vc, bool backdoor)
+HttpClientSession::attach_connector(Connector * new_vc, bool backdoor)
 {
-
 	client_vc = new_vc;
-	magic = HTTP_CS_MAGIC_ALIVE;
-
-	this->backdoor_connect = backdoor;
-
-	conn_decrease = true;
-
-	read_buffer = new_MIOBuffer(BUFFER_SIZE_INDEX_4K);
-	sm_reader = read_buffer->alloc_reader();
-
-	do_api_callout(OC_HTTP_SSN_START_HOOK);
-
+	backdoor_connect = backdoor;
 }
 
 
@@ -260,15 +269,10 @@ HttpClientSession::do_io_close(int32_t errr_no){
 		set_handler(&HttpClientSession::state_wait_for_close);
 
 		client_vc->do_io_shutdown(IO_SHUTDOWN_WRITE);
-
 		client_vc->do_io_read(this, INT64_MAX, read_buffer);
-
 		sm_reader->consume(sm_reader->read_avail());
 
-//		client_vc->set_active_timeout()
-
 //		client_vc->set_active_timeout(HRTIME_SECONDS(current_reader->t_state.txn_conf->keep_alive_no_activity_timeout_out));
-
 
 	} else {
 
@@ -319,13 +323,11 @@ HttpClientSession::state_wait_for_close(int event, void *data)
 		break;
 
 	case CON_EVENT_READ_READY:
-
 		// Drain any data read
 		sm_reader->consume(sm_reader->read_avail());
 		break;
 
 	default:
-
 		ink_release_assert(0);
 		break;
 
@@ -338,26 +340,33 @@ int
 HttpClientSession::state_api_callout(int event, void * /* data ATS_UNUSED */)
 {
 	switch (event) {
-	case CON_EVENT_NONE:
-	case EVENT_INTERVAL:
+	case EVENT_NONE:
 	case HTTP_CONTINUE:
+
+		if(session_msg.GetType() <= OC_HTTP_SSN_START_HOOK)
+		{
+			session_msg.SetType(OC_HTTP_SSN_START_HOOK);
+			session_msg.SetInt64(0);
+		}
+
 		handle_api_return(event);
 		break;
 
 	default:
 		ink_assert(false);
+
 	case HTTP_ERROR:
 		handle_api_return(event);
-		break;
-	}
+	break;
+	  }
 
-	return 0;
+	  return 0;
 }
 
 void
 HttpClientSession::handle_api_return(int event)
 {
-	switch (cur_hook_id) {
+	switch (session_msg.GetType()) {
 
 	case OC_HTTP_SSN_START_HOOK:
 
@@ -425,14 +434,9 @@ HttpClientSession::release(IOBufferReader * r)
 		set_handler(&HttpClientSession::state_keep_alive);
 
 		do_io_read(this, INT64_MAX, read_buffer);
-////		ink_assert(slave_ka_vio != ka_vio);
+//		ink_assert(slave_ka_vio != ka_vio);
 //		client_vc->set_inactivity_timeout(HRTIME_SECONDS(ka_in));
 //		client_vc->cancel_active_timeout();
 	}
 }
 
-HttpServerSession *
-HttpClientSession::get_bound_ss()
-{
-	  return bound_ss;
-}

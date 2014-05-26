@@ -24,14 +24,14 @@
 
 #define EVENT_DONE                0     // 0
 #define EVENT_CONT                1     // 1
-#define EVENT_RETURN             5
-#define EVENT_RESTART            6
+#define EVENT_RETURN              5
+#define EVENT_RESTART             6
 #define EVENT_RESTART_DELAYED     7
 
 
-#define CON_EVENT_NONE                  0
-#define CON_EVENT_IMMEDIATE               EVENT_IMMEDIATE
 
+#define CON_EVENT_NONE                  	0
+#define CON_EVENT_IMMEDIATE               EVENT_IMMEDIATE
 
 #define  CON_EVENT_EVENTS_START                     100
 #define CON_EVENT_READ_READY              CON_EVENT_EVENTS_START
@@ -273,10 +273,11 @@ public:
 
 };
 
-class Connector : public UTaskObj,  IOStream{
+class Connector : public UTaskObj{
+
 public:
 	Connector();
-    	virtual ~Connector();
+	virtual ~Connector();
 
 public:
 
@@ -286,28 +287,28 @@ public:
 	virtual int handle_output(URE_Handle h);
 	virtual int handle_message(URE_Msg& msg);
 
-	virtual int32_t 	do_io_read(UTaskObj obj, int64_t nbytes, MIOBuffer *buf);
-	virtual int32_t 	do_io_write(UTaskObj obj, int64_t nbytes, IOBufferReader *buf, bool owner = false);
+	virtual int32_t 	do_io_read(UTaskObj* obj, int64_t nbytes, MIOBuffer *buf);
+	virtual int32_t 	do_io_write(UTaskObj* obj, int64_t nbytes, IOBufferReader *buf, bool owner = false);
 	virtual int32_t  	do_io_close(int32_t lerrno = -1);
 	virtual int32_t  	do_io_shutdown(int32_t howto);
 	virtual int32_t 	set_tcp_init_cwnd(int32_t  desired_cwnd);
 	virtual int32_t 	apply_options();
-	  /////////////////////////////////////////////////////////////////////////////////////
-	  //                SET THE TIMEOUT ASSOCIATED WITH THIS CONNECTION.              //
-	 //---------------------------------------------------------------------------------//
-	  //  active_timeout : 																 //
-	  //     	 the total elasped time of   the connection.                                        	 //			                            //
-	  //  inactivity_timeout: 															 //
-	  //        the elapsed time from the time that a read or a write was scheduled    //
-	  // during which the  connection  was unable to sink/provide data.                    //
-	 //                               												    //
-	 // --------------------------------------------------------------------------------//
-	  //  NOTES:                                                                                                             //
-	  //        calling these functions repeatedly resets the timeout.                            //
-	  //        These functions are NOT THREAD-SAFE, and may only be called when  //
-	  //  handing an  event from this NetVConnection,   or the Connector creation	 //
-	  //   callback.                                                                                                          //
-	  ////////////////////////////////////////////////////////////////////////////////////
+	/////////////////////////////////////////////////////////////////////////////////////
+	//                SET THE TIMEOUT ASSOCIATED WITH THIS CONNECTION.              //
+	//---------------------------------------------------------------------------------//
+	//  active_timeout : 																 //
+	//     	 the total elasped time of   the connection.                                        	 //			                            //
+	//  inactivity_timeout: 															 //
+	//        the elapsed time from the time that a read or a write was scheduled    //
+	// during which the  connection  was unable to sink/provide data.                    //
+	//                               												    //
+	// --------------------------------------------------------------------------------//
+	//  NOTES:                                                                                                             //
+	//        calling these functions repeatedly resets the timeout.                            //
+	//        These functions are NOT THREAD-SAFE, and may only be called when  //
+	//  handing an  event from this NetVConnection,   or the Connector creation	 //
+	//   callback.                                                                                                          //
+	////////////////////////////////////////////////////////////////////////////////////
 	virtual void 		set_active_timeout(int64_t timeout_in){this->active_timeout_in = timeout_in;}
 	virtual void 		set_inactivity_timeout(int64_t timeout_in){this->inactivity_timeout_in = timeout_in;}
 	virtual void 		cancel_active_timeout(){}
@@ -321,20 +322,20 @@ public:
 	virtual void 		set_remote_addr(SockAddr& sock) { m_remote_addr = sock; }
 	virtual SockAddr  get_remote_addr(){ return m_remote_addr;}
 
-	virtual int64_t 	 get_socket(){ return m_stream.GetHandle();}
-	virtual int32_t      Attach(int fd){ return m_stream.Attach(fd);}
+	virtual int64_t 	get_socket(){ return m_stream.GetHandle();}
+	virtual int32_t   Attach(int fd){ return m_stream.Attach(fd);}
 
-	virtual int32_t      disable_read();
-	virtual int32_t      disable_write();
+	virtual int32_t   disable_read();
+	virtual int32_t   disable_write();
 
-	virtual int64_t       readv(int32_t  fd, struct iovec *vector, size_t count);
-	virtual int64_t       writev(int32_t fd, struct iovec *vector, size_t count);
+	virtual int64_t   readv(int32_t  fd, struct iovec *vector, size_t count);
+	virtual int64_t   writev(int32_t fd, struct iovec *vector, size_t count);
 
 	virtual int64_t 	load_buffer_and_write(int64_t towrite, int64_t &wattempted, int64_t &total_wrote, MIOBufferAccessor & buf, int &needs);
 
 
 	///////////////////////////////////////////////////////////////////////////
-	//                       HTTP SSL 相关设置                                     //
+	//                       HTTP SSL 相关设置                   //
 	///////////////////////////////////////////////////////////////////////////
 	virtual void setSSLHandshakeWantsRead(bool ) { return; }
 	virtual bool getSSLHandshakeWantsRead() { return false; }
@@ -345,6 +346,18 @@ public:
 	virtual bool getSSLClientConnection(){ return (false);}
 	virtual void setSSLClientConnection(bool state){ (void) state;}
 
+	//event
+	inline int32_t read_signal_and_update(int event);
+	inline int32_t write_signal_and_update(int event);
+	inline int32_t read_signal_done(int event);
+	inline int32_t write_signal_done(int event);
+	inline int32_t read_signal_error(int lerrno);
+	inline int32_t write_signal_error(int lerrno);
+
+	//
+	inline int32_t write_reschedule();
+	inline int32_t read_reschedule();
+	inline int32_t net_activity();
 
 protected:
 	volatile int closed;
@@ -373,8 +386,8 @@ protected:
 		} f;
 	};
 
-	ConnectorOptions   options;
-	SockStream 		  m_stream;
+	ConnectorOptions    options;
+	SockStream 		     m_stream;
 	SockAddr     		  m_remote_addr;
 	SockAddr     		  m_local_addr;
 };
