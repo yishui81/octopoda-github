@@ -68,7 +68,8 @@ HttpClientSession::HttpClientSession()
 			m_active(false),
 			debug_on(false),
 			current_hook(0),
-			current_step(0)
+			current_step(0),
+			callback(0)
 			//cur_msg(NULL)
 {
 

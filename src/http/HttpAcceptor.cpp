@@ -191,17 +191,17 @@ HttpAcceptor::handle_input(URE_Handle h)
 			 //}
 
 			 //(3) copy over session related data
-			HttpClientSession *new_session = new HttpClientSession();
+			HttpClientSession *new_session = HttpClientSession::allocate();
 
-			new_session->f_outbound_transparent = transparent;
-			new_session->_transparent_passthrough = transparent_passthrough;
+			new_session->outbound_transparent = transparent;
+			new_session->transparent_passthrough = transparent_passthrough;
 			new_session->outbound_ip4 = this->listen_ip4;
 			new_session->outbound_ip6 = this->listen_ip6;
 			new_session->outbound_port = this->listen_port;
 
 			//new_session->host_res_style = ats_host_res_from(client_ip->sa_family, host_res_preference);
 			//new_session->acl_method_mask = acl_method_mask;
-			new_session->new_connection(Connector, backdoor);
+			new_session->attach_connector(conn, backdoor);
 
 			//(4) Connection Task进入UV
 			conn->EnterWorkEnv(this->GetWorkEnv());
