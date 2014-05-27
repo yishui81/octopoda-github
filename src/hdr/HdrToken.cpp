@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include "Allocator.h"
 #include "Compatability.h"
-#include "HTTP.h"
+#include "Http.h"
 #include "HdrToken.h"
 #include "MIME.h"
 #include "Regex.h"

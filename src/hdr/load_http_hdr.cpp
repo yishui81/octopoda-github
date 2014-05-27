@@ -45,7 +45,7 @@
 
 #include "HdrHeap.h"
 #include "MIME.h"
-#include "HTTP.h"
+#include "Http.h"
 #include "Tokenizer.h"
 #include "Diags.h"
 #include <stdio.h>
@@ -54,6 +54,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include "HttpHeader.h"
 
 void *low_load_addr = NULL;
 void *high_load_addr = NULL;
@@ -95,7 +96,7 @@ void
 process_http_hdr_impl(HdrHeapObjImpl * obj, int offset)
 {
   char *s;
-  HTTPHdrImpl *hhdr = (HTTPHdrImpl *) obj;
+  HttpHeaderImpl *hhdr = (HttpHeaderImpl *) obj;
 
   if (hhdr->m_polarity == HTTP_TYPE_REQUEST) {
     printf("    is a request hdr\n");
