@@ -106,11 +106,11 @@ public:
   /////////////////////////////////
 
   static int SelectFromAlternates(CacheHTTPInfoVector * cache_vector_data,
-                                  HTTPHdr * client_request, CacheLookupHttpConfig * cache_lookup_http_config_params);
+                                  HttpHeader * client_request, CacheLookupHttpConfig * cache_lookup_http_config_params);
 
-  static float calculate_quality_of_match(CacheLookupHttpConfig * http_config_params, HTTPHdr * client_request, // in
-                                          HTTPHdr * obj_client_request, // in
-                                          HTTPHdr * obj_origin_server_response);        // in
+  static float calculate_quality_of_match(CacheLookupHttpConfig * http_config_params, HttpHeader * client_request, // in
+                                          HttpHeader * obj_client_request, // in
+                                          HttpHeader * obj_origin_server_response);        // in
 
   static float calculate_quality_of_accept_match(MIMEField * accept_field, MIMEField * content_field);
 
@@ -131,12 +131,12 @@ public:
   // variability & server negotiation routines //
   ///////////////////////////////////////////////
 
-  static Variability_t CalcVariability(CacheLookupHttpConfig * http_config_params, HTTPHdr * client_request,    // in
-                                       HTTPHdr * obj_client_request,    // in
-                                       HTTPHdr * obj_origin_server_response     // in
+  static Variability_t CalcVariability(CacheLookupHttpConfig * http_config_params, HttpHeader * client_request,    // in
+                                       HttpHeader * obj_client_request,    // in
+                                       HttpHeader * obj_origin_server_response     // in
     );
 
-  static HTTPStatus match_response_to_request_conditionals(HTTPHdr * ua_request, HTTPHdr * c_response);
+  static HTTPStatus match_response_to_request_conditionals(HttpHeader * ua_request, HttpHeader * c_response);
 
 };
 

@@ -44,9 +44,9 @@
 */
 #define LAZY_BUF_ALLOC
 
-#include "P_Net.h"
 
 #include "HttpConnectionCount.h"
+
 
 class HttpStateMachine;
 class MIOBuffer;

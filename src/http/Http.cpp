@@ -145,7 +145,7 @@ int HTTP_LEN_PUBLIC;
 int HTTP_LEN_S_MAXAGE;
 int HTTP_LEN_NEED_REVALIDATE_ONCE;
 
-Arena* const HttpHeader::USE_HDR_HEAP_MAGIC = reinterpret_cast<Arena*>(1);
+
 
 /***********************************************************************
  *                                                                     *
@@ -153,11 +153,11 @@ Arena* const HttpHeader::USE_HDR_HEAP_MAGIC = reinterpret_cast<Arena*>(1);
  *                                                                     *
  ***********************************************************************/
 
-inline static int
-is_digit(char c)
-{
-	return ((c <= '9') && (c >= '0'));
-}
+//inline static int
+//is_digit(char c)
+//{
+//	return ((c <= '9') && (c >= '0'));
+//}
 
 /***********************************************************************
  *                                                                     *

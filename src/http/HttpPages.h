@@ -37,9 +37,9 @@
 #include "libts.h"
 //#include "P_EventSystem.h"
 #include "DynArray.h"
-#include "HTTP.h"
+#include "Http.h"
 //#include "StatPages.h"
-#include "HttpSM.h"
+#include "HttpStateMachine.h"
 
 class HttpStateMachine;
 

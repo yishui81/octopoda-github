@@ -213,7 +213,7 @@ protected:
 
 private:
   // No gratuitous copies!
-  HttpHeader(const HTTPHdr & m);
+  HttpHeader(const HttpHeader & m);
   HttpHeader & operator =(const HttpHeader & m);
 
   friend class UrlPrintHack; // don't ask.

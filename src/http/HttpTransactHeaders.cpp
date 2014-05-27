@@ -21,12 +21,9 @@
   limitations under the License.
  */
 #include "libts.h"
-
-#include "HttpTransact.h"
 #include "HttpTransactHeaders.h"
-#include "HTTP.h"
-#include "HdrUtils.h"
-#include "HttpCompat.h"
+#include "Http.h"
+#include <string.h>
 
 //#include "I_Machine.h"
 
@@ -77,7 +74,7 @@ HttpTransactHeaders::is_this_method_supported(int the_scheme, int the_method)
 
 
 void
-HttpTransactHeaders::insert_supported_methods_in_response(HTTPHdr *response, int scheme)
+HttpTransactHeaders::insert_supported_methods_in_response(HttpHeader *response, int scheme)
 {
 	int method_output_lengths[32];
 
@@ -183,7 +180,7 @@ HttpTransactHeaders::insert_supported_methods_in_response(HTTPHdr *response, int
 
 
 void
-HttpTransactHeaders::build_base_response(HTTPHdr *outgoing_response,
+HttpTransactHeaders::build_base_response(HttpHeader *outgoing_response,
                                          HTTPStatus status,
                                          const char *reason_phrase, int reason_phrase_len, ink_time_t date)
 {
@@ -205,8 +202,8 @@ HttpTransactHeaders::build_base_response(HTTPHdr *outgoing_response,
 // If header Date: is not present or invalid in src_hdr,
 // then the given date will be used.
 void
-HttpTransactHeaders::copy_header_fields(HTTPHdr *src_hdr,
-                                        HTTPHdr *new_hdr, bool retain_proxy_auth_hdrs, ink_time_t date)
+HttpTransactHeaders::copy_header_fields(HttpHeader *src_hdr,
+                                        HttpHeader *new_hdr, bool retain_proxy_auth_hdrs, ink_time_t date)
 {
 	ink_assert(src_hdr->valid());
 	ink_assert(!new_hdr->valid());
@@ -263,7 +260,7 @@ HttpTransactHeaders::copy_header_fields(HTTPHdr *src_hdr,
 ////////////////////////////////////////////////////////////////////////
 // Just convert the outgoing request to the appropriate version
 void
-HttpTransactHeaders::convert_request(HTTPVersion outgoing_ver, HTTPHdr *outgoing_request)
+HttpTransactHeaders::convert_request(HTTPVersion outgoing_ver, HttpHeader *outgoing_request)
 {
 	if (outgoing_ver == HTTPVersion(1, 0)) {
 
@@ -288,7 +285,7 @@ HttpTransactHeaders::convert_request(HTTPVersion outgoing_ver, HTTPHdr *outgoing
 ////////////////////////////////////////////////////////////////////////
 // Just convert the outgoing response to the appropriate version
 void
-HttpTransactHeaders::convert_response(HTTPVersion outgoing_ver, HTTPHdr *outgoing_response)
+HttpTransactHeaders::convert_response(HTTPVersion outgoing_ver, HttpHeader *outgoing_response)
 {
 	if (outgoing_ver == HTTPVersion(1, 0)) {
 
@@ -314,7 +311,7 @@ HttpTransactHeaders::convert_response(HTTPVersion outgoing_ver, HTTPHdr *outgoin
 ////////////////////////////////////////////////////////////////////////
 // Take an existing outgoing request header and make it HTTP/0.9
 void
-HttpTransactHeaders::convert_to_0_9_request_header(HTTPHdr *outgoing_request)
+HttpTransactHeaders::convert_to_0_9_request_header(HttpHeader *outgoing_request)
 {
 	// These are required
 	ink_assert(outgoing_request->method_get_wksidx() == HTTP_WKSIDX_GET);
@@ -330,7 +327,7 @@ HttpTransactHeaders::convert_to_0_9_request_header(HTTPHdr *outgoing_request)
 ////////////////////////////////////////////////////////////////////////
 // Take an existing outgoing request header and make it HTTP/1.0
 void
-HttpTransactHeaders::convert_to_1_0_request_header(HTTPHdr *outgoing_request)
+HttpTransactHeaders::convert_to_1_0_request_header(HttpHeader *outgoing_request)
 {
 	// These are required
 	ink_assert(outgoing_request->url_get()->valid());
@@ -356,7 +353,7 @@ HttpTransactHeaders::convert_to_1_0_request_header(HTTPHdr *outgoing_request)
 ////////////////////////////////////////////////////////////////////////
 // Take an existing outgoing request header and make it HTTP/1.1
 void
-HttpTransactHeaders::convert_to_1_1_request_header(HTTPHdr *outgoing_request)
+HttpTransactHeaders::convert_to_1_1_request_header(HttpHeader *outgoing_request)
 {
 
 	// These are required
@@ -379,7 +376,7 @@ HttpTransactHeaders::convert_to_1_1_request_header(HTTPHdr *outgoing_request)
 ////////////////////////////////////////////////////////////////////////
 // Take an existing outgoing response header and make it HTTP/0.9
 void
-HttpTransactHeaders::convert_to_0_9_response_header(HTTPHdr * /* outgoing_response ATS_UNUSED */)
+HttpTransactHeaders::convert_to_0_9_response_header(HttpHeader * /* outgoing_response ATS_UNUSED */)
 {
   // Http 0.9 does not require a response header.
 
@@ -394,7 +391,7 @@ HttpTransactHeaders::convert_to_0_9_response_header(HTTPHdr * /* outgoing_respon
 ////////////////////////////////////////////////////////////////////////
 // Take an existing outgoing response header and make it HTTP/1.0
 void
-HttpTransactHeaders::convert_to_1_0_response_header(HTTPHdr *outgoing_response)
+HttpTransactHeaders::convert_to_1_0_response_header(HttpHeader *outgoing_response)
 {
 	//     // These are required
 	//     ink_assert(outgoing_response->status_get());
@@ -412,7 +409,7 @@ HttpTransactHeaders::convert_to_1_0_response_header(HTTPHdr *outgoing_response)
 ////////////////////////////////////////////////////////////////////////
 // Take an existing outgoing response header and make it HTTP/1.1
 void
-HttpTransactHeaders::convert_to_1_1_response_header(HTTPHdr *outgoing_response)
+HttpTransactHeaders::convert_to_1_1_response_header(HttpHeader *outgoing_response)
 {
 	// These are required
 	ink_assert(outgoing_response->status_get());
@@ -437,7 +434,7 @@ HttpTransactHeaders::convert_to_1_1_response_header(HTTPHdr *outgoing_response)
 ink_time_t
 HttpTransactHeaders::calculate_document_age(ink_time_t request_time,
                                             ink_time_t response_time,
-                                            HTTPHdr *base_response, ink_time_t base_response_date, ink_time_t now)
+                                            HttpHeader *base_response, ink_time_t base_response_date, ink_time_t now)
 {
 	ink_time_t age_value = base_response->get_age();
 	ink_time_t date_value = 0;
@@ -497,7 +494,7 @@ HttpTransactHeaders::calculate_document_age(ink_time_t request_time,
 
 
 bool
-HttpTransactHeaders::does_server_allow_response_to_be_stored(HTTPHdr *resp)
+HttpTransactHeaders::does_server_allow_response_to_be_stored(HttpHeader *resp)
 {
 	uint32_t cc_mask = (MIME_COOKED_MASK_CC_NO_CACHE | MIME_COOKED_MASK_CC_NO_STORE | MIME_COOKED_MASK_CC_PRIVATE);
 
@@ -511,7 +508,7 @@ HttpTransactHeaders::does_server_allow_response_to_be_stored(HTTPHdr *resp)
 
 
 bool
-HttpTransactHeaders::downgrade_request(bool *origin_server_keep_alive, HTTPHdr *outgoing_request)
+HttpTransactHeaders::downgrade_request(bool *origin_server_keep_alive, HttpHeader *outgoing_request)
 {
 	//HTTPVersion ver;
 	/* First try turning keep_alive off */
@@ -542,7 +539,7 @@ HttpTransactHeaders::downgrade_request(bool *origin_server_keep_alive, HTTPHdr *
 }
 
 void
-HttpTransactHeaders::generate_and_set_squid_codes(HTTPHdr *header,
+HttpTransactHeaders::generate_and_set_squid_codes(HttpHeader *header,
                                                  char *via_string,
                                                  HttpTransact::SquidLogInfo *squid_codes)
 {
@@ -785,11 +782,11 @@ HttpTransactHeaders::generate_and_set_squid_codes(HTTPHdr *header,
 
 
 void
-HttpTransactHeaders::handle_conditional_headers(HttpTransact::CacheLookupInfo *cache_info, HTTPHdr *header)
+HttpTransactHeaders::handle_conditional_headers(HttpTransact::CacheLookupInfo *cache_info, HttpHeader *header)
 {
 	if (cache_info->action == HttpTransact::CACHE_DO_UPDATE) {
 
-		HTTPHdr *c_response = cache_info->object_read->response_get();
+		HttpHeader *c_response = cache_info->object_read->response_get();
 
 		// wouldn't be updating cache for range requests (would be writing)
 		uint64_t mask = (MIME_PRESENCE_RANGE | MIME_PRESENCE_IF_RANGE);
@@ -846,7 +843,7 @@ HttpTransactHeaders::handle_conditional_headers(HttpTransact::CacheLookupInfo *c
 
 
 void
-HttpTransactHeaders::insert_warning_header(HttpConfigParams *http_config_param, HTTPHdr *header, HTTPWarningCode code,
+HttpTransactHeaders::insert_warning_header(HttpConfigParams *http_config_param, HttpHeader *header, HTTPWarningCode code,
 								   const char *warn_text, int warn_text_len)
 {
 	int bufsize, len;
@@ -871,7 +868,7 @@ HttpTransactHeaders::insert_warning_header(HttpConfigParams *http_config_param, 
 void
 HttpTransactHeaders::insert_time_and_age_headers_in_response(ink_time_t request_sent_time,
                                                              ink_time_t response_received_time,
-                                                             ink_time_t now, HTTPHdr *base, HTTPHdr *outgoing)
+                                                             ink_time_t now, HttpHeader *base, HttpHeader *outgoing)
 {
 	ink_time_t date = base->get_date();
 	ink_time_t current_age = calculate_document_age(request_sent_time, response_received_time, base, date, now);
@@ -887,7 +884,7 @@ HttpTransactHeaders::insert_time_and_age_headers_in_response(ink_time_t request_
 
 
 void
-HttpTransactHeaders::insert_server_header_in_response(const char *server_tag, int server_tag_size, HTTPHdr *h)
+HttpTransactHeaders::insert_server_header_in_response(const char *server_tag, int server_tag_size, HttpHeader *h)
 {
 	if (likely(server_tag && server_tag_size > 0 && h)) {
 		h->set_server(server_tag, server_tag_size);
@@ -940,7 +937,7 @@ HttpTransactHeaders::insert_server_header_in_response(const char *server_tag, in
 //
 ///////////////////////////////////////////////////////////////////////////////
 void
-HttpTransactHeaders::insert_via_header_in_request(HttpTransact::State *s, HTTPHdr *header)
+HttpTransactHeaders::insert_via_header_in_request(HttpTransact::State *s, HttpHeader *header)
 {
 	char new_via_string[1024]; // 512-bytes for hostname+via string, 512-bytes for the debug info
 	char *via_string = new_via_string;
@@ -1012,7 +1009,7 @@ HttpTransactHeaders::insert_via_header_in_request(HttpTransact::State *s, HTTPHd
 
 
 void
-HttpTransactHeaders::insert_via_header_in_response(HttpTransact::State *s, HTTPHdr *header)
+HttpTransactHeaders::insert_via_header_in_response(HttpTransact::State *s, HttpHeader *header)
 {
 	char new_via_string[1024]; // 512-bytes for hostname+via string, 512-bytes for the debug info
 	char *via_string = new_via_string;
@@ -1091,7 +1088,7 @@ HttpTransactHeaders::insert_via_header_in_response(HttpTransact::State *s, HTTPH
 //  fix for INKqa09089
 ///////////////////////////////////////////////////////////////////////////////
 void
-HttpTransactHeaders::insert_basic_realm_in_proxy_authenticate(const char *realm, HTTPHdr *header, bool bRevPrxy)
+HttpTransactHeaders::insert_basic_realm_in_proxy_authenticate(const char *realm, HttpHeader *header, bool bRevPrxy)
 {
 	char new_basic_realm[128];
 	char *basic_realm;
@@ -1115,20 +1112,20 @@ HttpTransactHeaders::insert_basic_realm_in_proxy_authenticate(const char *realm,
 
 
 inline void
-HttpTransactHeaders::process_connection_field_in_outgoing_header(HTTPHdr *base, HTTPHdr *header)
+HttpTransactHeaders::process_connection_field_in_outgoing_header(HttpHeader *base, HttpHeader *header)
 {
 	_process_xxx_connection_field_in_outgoing_header(MIME_FIELD_CONNECTION, MIME_LEN_CONNECTION, base, header);
 }
 
 inline void
-HttpTransactHeaders::process_proxy_connection_field_in_outgoing_header(HTTPHdr *base, HTTPHdr *header)
+HttpTransactHeaders::process_proxy_connection_field_in_outgoing_header(HttpHeader *base, HttpHeader *header)
 {
 	_process_xxx_connection_field_in_outgoing_header(MIME_FIELD_PROXY_CONNECTION, MIME_LEN_PROXY_CONNECTION, base, header);
 }
 
 
 void
-HttpTransactHeaders::process_connection_headers(HTTPHdr *base, HTTPHdr *outgoing)
+HttpTransactHeaders::process_connection_headers(HttpHeader *base, HttpHeader *outgoing)
 {
 	process_connection_field_in_outgoing_header(base, outgoing);
 	process_proxy_connection_field_in_outgoing_header(base, outgoing);
@@ -1138,7 +1135,7 @@ HttpTransactHeaders::process_connection_headers(HTTPHdr *base, HTTPHdr *outgoing
 void
 HttpTransactHeaders::_process_xxx_connection_field_in_outgoing_header(const char *wks_field_name,
                                                                       int wks_field_name_len,
-                                                                      HTTPHdr *base, HTTPHdr *header)
+                                                                      HttpHeader *base, HttpHeader *header)
 {
 	MIMEField *con_hdr;
 	con_hdr = base->field_find(wks_field_name, wks_field_name_len);
@@ -1195,7 +1192,7 @@ HttpTransactHeaders::_process_xxx_connection_field_in_outgoing_header(const char
 
 
 void
-HttpTransactHeaders::remove_conditional_headers(HTTPHdr *outgoing)
+HttpTransactHeaders::remove_conditional_headers(HttpHeader *outgoing)
 {
 	if (outgoing->presence(MIME_PRESENCE_IF_MODIFIED_SINCE |
 			MIME_PRESENCE_IF_UNMODIFIED_SINCE |
@@ -1214,7 +1211,7 @@ HttpTransactHeaders::remove_conditional_headers(HTTPHdr *outgoing)
 ////////////////////////////////////////////////////////////////////////
 // Deal with lame-o servers by removing the host name from the url.
 void
-HttpTransactHeaders::remove_host_name_from_url(HTTPHdr *outgoing_request)
+HttpTransactHeaders::remove_host_name_from_url(HttpHeader *outgoing_request)
 {
 	URL *outgoing_url = outgoing_request->url_get();
 	outgoing_url->nuke_proxy_stuff();
@@ -1222,7 +1219,7 @@ HttpTransactHeaders::remove_host_name_from_url(HTTPHdr *outgoing_request)
 
 
 void
-HttpTransactHeaders::add_global_user_agent_header_to_request(HttpConfigParams *http_config_param, HTTPHdr *header)
+HttpTransactHeaders::add_global_user_agent_header_to_request(HttpConfigParams *http_config_param, HttpHeader *header)
 {
 	if (http_config_param->global_user_agent_header) {
 
@@ -1250,7 +1247,7 @@ HttpTransactHeaders::add_global_user_agent_header_to_request(HttpConfigParams *h
 
 
 void
-HttpTransactHeaders::add_server_header_to_response(OverridableHttpConfigParams *http_txn_conf, HTTPHdr *header)
+HttpTransactHeaders::add_server_header_to_response(OverridableHttpConfigParams *http_txn_conf, HttpHeader *header)
 {
 
 	if (http_txn_conf->proxy_response_server_enabled && http_txn_conf->proxy_response_server_string) {
@@ -1287,7 +1284,7 @@ HttpTransactHeaders::add_server_header_to_response(OverridableHttpConfigParams *
 
 void
 HttpTransactHeaders::remove_privacy_headers_from_request(HttpConfigParams *http_config_param,
-                                                         OverridableHttpConfigParams *http_txn_conf, HTTPHdr *header)
+                                                         OverridableHttpConfigParams *http_txn_conf, HttpHeader *header)
 {
 	if (!header){
 		return;

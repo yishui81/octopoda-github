@@ -27,7 +27,7 @@
 #include "HttpTransactHeaders.h"
 #include "HttpTransactCache.h"
 #include "time.h"
-#include "HTTP.h"
+#include "Http.h"
 #include "HttpCompat.h"
 #include "Error.h"
 #include "HdrToken.h"
@@ -186,7 +186,7 @@ is_empty(char *s)
 */
 int
 HttpTransactCache::SelectFromAlternates(CacheHTTPInfoVector * cache_vector,
-                                        HTTPHdr * client_request, CacheLookupHttpConfig * http_config_params)
+                                        HttpHeader * client_request, CacheLookupHttpConfig * http_config_params)
 {
 	time_t current_age, best_age = NUM_SECONDS_IN_ONE_YEAR;
 	time_t t_now = 0;
@@ -231,8 +231,8 @@ HttpTransactCache::SelectFromAlternates(CacheHTTPInfoVector * cache_vector,
 		float Q;
 
 		CacheHTTPInfo *obj = cache_vector->get(i);
-		HTTPHdr *cached_request = obj->request_get();
-		HTTPHdr *cached_response = obj->response_get();
+		HttpHeader *cached_request = obj->request_get();
+		HttpHeader *cached_response = obj->response_get();
 
 		if (!(obj->object_key_get() == zero_key)) {
 
@@ -338,9 +338,9 @@ HttpTransactCache::SelectFromAlternates(CacheHTTPInfoVector * cache_vector,
 */
 float
 HttpTransactCache::calculate_quality_of_match(CacheLookupHttpConfig * http_config_param,
-                                              HTTPHdr * client_request,
-                                              HTTPHdr * obj_client_request,
-                                              HTTPHdr * obj_origin_server_response)
+                                              HttpHeader * client_request,
+                                              HttpHeader * obj_client_request,
+                                              HttpHeader * obj_origin_server_response)
 {
 	// For PURGE requests, any alternate is good really.
 	if (client_request->method_get_wksidx() == HTTP_WKSIDX_PURGE){
@@ -1304,8 +1304,8 @@ language_wildcard:
 */
 
 Variability_t
-HttpTransactCache::CalcVariability(CacheLookupHttpConfig * http_config_params, HTTPHdr * client_request,
-                                   HTTPHdr * obj_client_request, HTTPHdr * obj_origin_server_response)
+HttpTransactCache::CalcVariability(CacheLookupHttpConfig * http_config_params, HttpHeader * client_request,
+                                   HttpHeader * obj_client_request, HttpHeader * obj_origin_server_response)
 {
 	ink_assert(http_config_params != NULL);
 	ink_assert(client_request != NULL);
@@ -1471,7 +1471,7 @@ HttpTransactCache::CalcVariability(CacheLookupHttpConfig * http_config_params, H
 
 */
 HTTPStatus
-HttpTransactCache::match_response_to_request_conditionals(HTTPHdr * request, HTTPHdr * response)
+HttpTransactCache::match_response_to_request_conditionals(HttpHeader * request, HttpHeader * response)
 {
 	HTTPStatus response_code = HTTP_STATUS_NONE;
 

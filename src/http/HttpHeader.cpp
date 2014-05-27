@@ -13,17 +13,28 @@ is_digit(char c)
 	return ((c <= '9') && (c >= '0'));
 }
 
+Arena* const HttpHeader::USE_HDR_HEAP_MAGIC = reinterpret_cast<Arena*>(1);
 
-inline
+
+
 HttpHeader::HttpHeader()
-  : MIMEHdr(), m_http(NULL), m_url_cached(), m_target_cached(false)
+  : MIMEHdr(),
+    m_http(NULL),
+    m_url_cached(),
+    m_target_cached(false),
+    m_target_in_url(false),
+    m_target_cached(false),
+    m_port_in_header(false),
+    m_port(0),
+    m_host_length(0),
+    m_host_mime(NULL)
 {
+
 }
 
 
 /*-------------------------------------------------------------------------
   -------------------------------------------------------------------------*/
-inline
 HttpHeader::~HttpHeader()
 {                               /* nop */
 }

@@ -7,6 +7,7 @@
 
 #include "HttpTransactState.h"
 #include "HttpTransact.h"
+#include "Http.h"
 
 HttpTransactState::~HttpTransactState() {
 	// TODO Auto-generated destructor stub

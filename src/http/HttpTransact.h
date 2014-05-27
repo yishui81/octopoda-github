@@ -632,10 +632,10 @@ public:
     URL *lookup_url;
     URL lookup_url_storage;
     URL original_url;
-    HTTPInfo *object_read;
-    HTTPInfo *second_object_read;
-    HTTPInfo object_store;
-    HTTPInfo transform_store;
+    HttpInfo *object_read;
+    HttpInfo *second_object_read;
+    HttpInfo object_store;
+    HttpInfo transform_store;
     CacheLookupHttpConfig config;
     CacheDirectives directives;
     int open_read_retries;
@@ -794,12 +794,12 @@ public:
 
   typedef struct _HeaderInfo
   {
-    HTTPHdr client_request;
-    HTTPHdr client_response;
-    HTTPHdr server_request;
-    HTTPHdr server_response;
-    HTTPHdr transform_response;
-    HTTPHdr cache_response;
+    HttpHeader client_request;
+    HttpHeader client_response;
+    HttpHeader server_request;
+    HttpHeader server_response;
+    HttpHeader transform_response;
+    HttpHeader cache_response;
    int64_t request_content_length;
     int64_t response_content_length;
     int64_t transform_request_cl;
@@ -1253,10 +1253,10 @@ public:
   static void handle_cache_operation_on_forward_server_response(State* s);
   static void handle_no_cache_operation_on_forward_server_response(State* s);
   static void merge_and_update_headers_for_cache_update(State* s);
-  static void set_headers_for_cache_write(State* s, HTTPInfo* cache_info, HTTPHdr* request, HTTPHdr* response);
-  static void set_header_for_transform(State* s, HTTPHdr* base_header);
-  static void merge_response_header_with_cached_header(HTTPHdr* cached_header, HTTPHdr* response_header);
-  static void merge_warning_header(HTTPHdr* cached_header, HTTPHdr* response_header);
+  static void set_headers_for_cache_write(State* s, HttpInfo* cache_info, HttpHeader* request, HttpHeader* response);
+  static void set_header_for_transform(State* s, HttpHeader* base_header);
+  static void merge_response_header_with_cached_header(HttpHeader* cached_header, HttpHeader* response_header);
+  static void merge_warning_header(HttpHeader* cached_header, HttpHeader* response_header);
   static void SetCacheFreshnessLimit(State* s);
   static void HandleApiErrorJump(State *);
 
@@ -1274,32 +1274,32 @@ public:
                                        HostDBInfo* host_db_info);
   static bool service_transaction_in_proxy_only_mode(State* s);
   static void setup_plugin_request_intercept(State* s);
-  static void handle_msie_reload_badness(State* s, HTTPHdr* client_request);
-  static void add_client_ip_to_outgoing_request(State* s, HTTPHdr* request);
-  static RequestError_t check_request_validity(State* s, HTTPHdr* incoming_hdr);
-  static ResponseError_t check_response_validity(State* s, HTTPHdr* incoming_hdr);
+  static void handle_msie_reload_badness(State* s, HttpHeader* client_request);
+  static void add_client_ip_to_outgoing_request(State* s, HttpHeader* request);
+  static RequestError_t check_request_validity(State* s, HttpHeader* incoming_hdr);
+  static ResponseError_t check_response_validity(State* s, HttpHeader* incoming_hdr);
   static bool delete_all_document_alternates_and_return(State* s, bool cache_hit);
   static bool did_forward_server_send_0_9_response(State* s);
   static bool does_client_request_permit_cached_response(const OverridableHttpConfigParams *p, CacheControlResult *c,
-                                                         HTTPHdr *h, char *via_string);
-  static bool does_client_request_permit_dns_caching(CacheControlResult* c, HTTPHdr* h);
-  static bool does_client_request_permit_storing(CacheControlResult* c, HTTPHdr* h);
-  static bool handle_internal_request(State* s, HTTPHdr* incoming_hdr);
-  static bool handle_trace_and_options_requests(State* s, HTTPHdr* incoming_hdr);
-  static void bootstrap_state_variables_from_request(State* s, HTTPHdr* incoming_request);
-  static void initialize_state_variables_for_origin_server(State* s, HTTPHdr* incoming_request, bool second_time);
-  static void initialize_state_variables_from_request(State* s, HTTPHdr* obsolete_incoming_request);
-  static void initialize_state_variables_from_response(State* s, HTTPHdr* incoming_response);
+                                                         HttpHeader *h, char *via_string);
+  static bool does_client_request_permit_dns_caching(CacheControlResult* c, HttpHeader* h);
+  static bool does_client_request_permit_storing(CacheControlResult* c, HttpHeader* h);
+  static bool handle_internal_request(State* s, HttpHeader* incoming_hdr);
+  static bool handle_trace_and_options_requests(State* s, HttpHeader* incoming_hdr);
+  static void bootstrap_state_variables_from_request(State* s, HttpHeader* incoming_request);
+  static void initialize_state_variables_for_origin_server(State* s, HttpHeader* incoming_request, bool second_time);
+  static void initialize_state_variables_from_request(State* s, HttpHeader* obsolete_incoming_request);
+  static void initialize_state_variables_from_response(State* s, HttpHeader* incoming_response);
   static bool is_server_negative_cached(State* s);
   static bool is_cache_response_returnable(State* s);
   static bool is_stale_cache_response_returnable(State* s);
   static bool need_to_revalidate(State* s);
   static bool url_looks_dynamic(URL* url);
   static bool is_request_cache_lookupable(State* s);
-  static bool is_request_valid(State* s, HTTPHdr* incoming_request);
+  static bool is_request_valid(State* s, HttpHeader* incoming_request);
   static bool is_request_retryable(State* s);
-  static bool is_response_cacheable(State* s, HTTPHdr* request, HTTPHdr* response);
-  static bool is_response_valid(State* s, HTTPHdr* incoming_response);
+  static bool is_response_cacheable(State* s, HttpHeader* request, HttpHeader* response);
+  static bool is_response_valid(State* s, HttpHeader* incoming_response);
 
   static void process_quick_http_filter(State* s, int method);
   static bool perform_accept_encoding_filtering(State* s);
@@ -1308,25 +1308,25 @@ public:
 
   static bool setup_auth_lookup(State* s);
   static bool will_this_request_self_loop(State* s);
-  static bool is_request_likely_cacheable(State* s, HTTPHdr* request);
+  static bool is_request_likely_cacheable(State* s, HttpHeader* request);
 
-  static void build_request(State* s, HTTPHdr* base_request, HTTPHdr* outgoing_request, HTTPVersion outgoing_version);
-  static void build_response(State* s, HTTPHdr* base_response, HTTPHdr* outgoing_response, HTTPVersion outgoing_version,
+  static void build_request(State* s, HttpHeader* base_request, HttpHeader* outgoing_request, HTTPVersion outgoing_version);
+  static void build_response(State* s, HttpHeader* base_response, HttpHeader* outgoing_response, HTTPVersion outgoing_version,
                              HTTPStatus status_code, const char *reason_phrase = NULL);
-  static void build_response(State* s, HTTPHdr* base_response, HTTPHdr* outgoing_response, HTTPVersion outgoing_version);
-  static void build_response(State* s, HTTPHdr* outgoing_response, HTTPVersion outgoing_version, HTTPStatus status_code,
+  static void build_response(State* s, HttpHeader* base_response, HttpHeader* outgoing_response, HTTPVersion outgoing_version);
+  static void build_response(State* s, HttpHeader* outgoing_response, HTTPVersion outgoing_version, HTTPStatus status_code,
                              const char *reason_phrase = NULL);
 
-  static void build_response_copy(State* s, HTTPHdr* base_response, HTTPHdr* outgoing_response, HTTPVersion outgoing_version);
-  static void handle_content_length_header(State* s, HTTPHdr* header, HTTPHdr* base);
-  static void change_response_header_because_of_range_request(State* s, HTTPHdr* header);
+  static void build_response_copy(State* s, HttpHeader* base_response, HttpHeader* outgoing_response, HTTPVersion outgoing_version);
+  static void handle_content_length_header(State* s, HttpHeader* header, HttpHeader* base);
+  static void change_response_header_because_of_range_request(State* s, HttpHeader* header);
 
-  static void handle_request_keep_alive_headers(State *s, HTTPVersion ver, HTTPHdr *heads);
-  static void handle_response_keep_alive_headers(State *s, HTTPVersion ver, HTTPHdr *heads);
-  static int calculate_document_freshness_limit(State *s, HTTPHdr *response, time_t response_date, bool *heuristic);
+  static void handle_request_keep_alive_headers(State *s, HTTPVersion ver, HttpHeader *heads);
+  static void handle_response_keep_alive_headers(State *s, HTTPVersion ver, HttpHeader *heads);
+  static int calculate_document_freshness_limit(State *s, HttpHeader *response, time_t response_date, bool *heuristic);
   static int calculate_freshness_fuzz(State *s, int fresh_limit);
-  static Freshness_t what_is_document_freshness(State *s, HTTPHdr *client_request, HTTPHdr *cached_obj_response);
-  static Authentication_t AuthenticationNeeded(const OverridableHttpConfigParams *p, HTTPHdr *client_request, HTTPHdr *obj_response);
+  static Freshness_t what_is_document_freshness(State *s, HttpHeader *client_request, HttpHeader *cached_obj_response);
+  static Authentication_t AuthenticationNeeded(const OverridableHttpConfigParams *p, HttpHeader *client_request, HttpHeader *obj_response);
   static void handle_parent_died(State* s);
   static void handle_server_died(State* s);
   static void build_error_response(State *s, HTTPStatus status_code, const char *reason_phrase_or_null, const char *error_body_type,
@@ -1349,7 +1349,7 @@ public:
   static void origin_server_connection_speed(State* s, ink_hrtime transfer_time, int64_t nbytes);
   static void client_result_stat(State* s, ink_hrtime total_time, ink_hrtime request_process_time);
   static void add_new_stat_block(State* s);
-  static void delete_warning_value(HTTPHdr* to_warn, HTTPWarningCode warning_code);
+  static void delete_warning_value(HttpHeader* to_warn, HTTPWarningCode warning_code);
   static bool is_connection_collapse_checks_success(State* s); //YTS Team, yamsat
 };
 
