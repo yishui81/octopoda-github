@@ -277,8 +277,8 @@ bool ChunkedHandler::generate_chunked_content()
 	ink_assert(max_chunk_header_len);
 
 	switch (last_server_event) {
-		case VC_EVENT_EOS:
-		case VC_EVENT_READ_COMPLETE:
+		case CON_EVENT_EOS:
+		case CON_EVENT_READ_COMPLETE:
 		case HTTP_TUNNEL_EVENT_PRECOMPLETE:
 			server_done = true;
 			break;

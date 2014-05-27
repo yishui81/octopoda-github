@@ -85,12 +85,12 @@ public :
 
 public :
 
-	void 	 set_half_close_flag()
+	void 	set_half_close_flag()
 	{
 		half_close = true;
 	}
 
-	Connector  *get_connector() const
+	Connector *get_connector() const
 	{
 		return client_vc;
 	}
@@ -173,6 +173,7 @@ private:
 	int64_t 						current_hook;
 	int32_t					   current_step;
 	URE_Msg						sm_msg;
+	int32_t                 callback;
 
 //	Link<HttpClientSession> debug_link;
 

@@ -14,6 +14,10 @@
 #include "libts.h"
 #include "BaseARE/UTaskObj.h"
 #include "I_IOBuffer.h"
+#include "Connector.h"
+#include "Handle.h"
+#include "HttpTunnelProducer.h"
+#include "HttpTunnelConsumer.h"
 //#include "P_EventSystem.h"
 
 static const int max_chunked_ahead_blocks = 128;
@@ -38,7 +42,7 @@ static int const CHUNK_IOBUFFER_SIZE_INDEX = MIN_IOBUFFER_SIZE;
 #define HTTP_TUNNEL_EVENT_PRECOMPLETE      (HTTP_TUNNEL_EVENTS_START + 2)
 #define HTTP_TUNNEL_EVENT_CONSUMER_DETACH  (HTTP_TUNNEL_EVENTS_START + 3)
 
-#define HTTP_TUNNEL_STATIC_PRODUCER  (VConnection*)!0
+#define HTTP_TUNNEL_STATIC_PRODUCER  (Connetor*)!0
 
 //YTS Team, yamsat Plugin
 #define ALLOCATE_AND_WRITE_TO_BUF 1
@@ -87,7 +91,7 @@ public:
 	IOBufferReader *ua_buffer_reader;
 };
 
-class HttpTunnel: public UTaskObj
+class HttpTunnel: public UTaskObj,Handle
 {
 	friend class HttpPagesHandler;
 	friend class CoreUtils;
@@ -114,7 +118,8 @@ class HttpTunnel: public UTaskObj
 public:
 	HttpTunnel();
 
-	void init(HttpStateMachine * sm_arg, ProxyMutex * amutex);
+//	void init(HttpStateMachine * sm_arg, ProxyMutex * amutex);
+	void init(HttpStateMachine * sm_arg);
 	void reset();
 
 	void kill_tunnel();
@@ -132,7 +137,7 @@ public:
 	void allocate_redirect_postdata_buffers(IOBufferReader * ua_reader);
 	void deallocate_redirect_postdata_buffers();
 
-	HttpTunnelProducer *add_producer(VConnection * vc,
+	HttpTunnelProducer *add_producer(Connetor * vc,
 							   int64_t nbytes,
 							   IOBufferReader * reader_start,
 							   HttpProducerHandler sm_handler,
@@ -144,17 +149,17 @@ public:
 	/// Set the maximum (preferred) chunk @a size of chunked output for @a producer.
 	void set_producer_chunking_size(HttpTunnelProducer* producer, int64_t size);
 
-	HttpTunnelConsumer *add_consumer(VConnection * vc,
-							   VConnection * producer,
+	HttpTunnelConsumer *add_consumer(Connetor * vc,
+							   Connetor * producer,
 							   HttpConsumerHandler sm_handler,
 							   HttpTunnelType_t vc_type,
 							   const char *name,
 							   int64_t skip_bytes = 0);
 
 	int deallocate_buffers();
-	DLL<HttpTunnelConsumer> *get_consumers(VConnection * vc);
-	HttpTunnelProducer *get_producer(VConnection * vc);
-	HttpTunnelConsumer *get_consumer(VConnection * vc);
+	//DLL<HttpTunnelConsumer> *get_consumers(Connetor * vc);
+	HttpTunnelProducer *get_producer(Connetor * vc);
+	HttpTunnelConsumer *get_consumer(Connetor * vc);
 	void tunnel_run(HttpTunnelProducer * p = NULL);
 
 	int main_handler(int event, void *data);
@@ -209,7 +214,7 @@ private:
 	FlowControl flow_state;
 
 public:
-  	  PostDataBuffers * postbuf;
+	PostDataBuffers * postbuf;
 };
 
 

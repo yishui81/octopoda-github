@@ -206,7 +206,8 @@ HttpClientSession::do_api_callout(const URE_Msg& msg)
 		if (event != HTTP_ERROR) {
 			new_transaction();
 		} else {
-			do_io_close(0);
+			handle_close(GetWorkEnv(), 0);
+			//do_io_close(0);
 		}
 		break;
 
@@ -366,6 +367,8 @@ HttpClientSession::state_api_callout(int event, void * /* data ATS_UNUSED */)
 void
 HttpClientSession::handle_api_return(int event)
 {
+	//ink_assert(cur_hook_id == TS_HTTP_SSN_START_HOOK || cur_hook_id == TS_HTTP_SSN_CLOSE_HOOK);
+
 	switch (session_msg.GetType()) {
 
 	case OC_HTTP_SSN_START_HOOK:

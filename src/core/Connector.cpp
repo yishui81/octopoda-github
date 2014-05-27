@@ -48,7 +48,7 @@ Connector::do_io_read(UTaskObj* obj, int64_t nbytes, MIOBuffer *buf)
 	read._cont = obj;
 	read.nbytes = nbytes;
 	read.ndone = 0;
-	read.vc_server = (VConnection *) this;
+	read.vc_server = (Connector *) this;
 
 	if (buf) {
 
@@ -99,7 +99,9 @@ Connector::handle_open(const URE_Msg &msg)
 int
 Connector::handle_close(UWorkEnv * orign_uwe, long retcode)
 {
-	//TODO
+	if(do_io_close()){
+
+	}
 	return 0;
 }
 
@@ -421,8 +423,6 @@ Connector::handle_message(URE_Msg& msg)
 int32_t
 Connector::do_io_shutdown(int32_t  howto)
 {
-
-
 	int32_t fd = m_stream.GetHandle();
 	int32_t  ret = 0;
 

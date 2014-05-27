@@ -9,7 +9,7 @@
 #include <sys/types.h>
 
 HttpTunnelConsumer::HttpTunnelConsumer()
-		: link(),
+		: //link(),
 		producer(NULL),
 		self_producer(NULL),
 		vc_type(HT_HTTP_CLIENT),

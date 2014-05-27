@@ -29,7 +29,6 @@ public:
 
 protected:
 	Handler handler;
-
 };
 
 

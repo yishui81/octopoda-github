@@ -7,7 +7,8 @@
 
 #ifndef HTTPTUNNELPRODUCER_H_
 #define HTTPTUNNELPRODUCER_H_
-
+#include "Connector.h"
+#include "List.h"
 /*
  *
  */
@@ -21,7 +22,7 @@ public:
 public:
 	DLL<HttpTunnelConsumer> consumer_list;
 	HttpTunnelConsumer *self_consumer;
-	VConnection *vc;
+	Connector *vc;
 	HttpProducerHandler vc_handler;
 	VIO *read_vio;
 	MIOBuffer *read_buffer;

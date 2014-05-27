@@ -18,12 +18,12 @@ public:
 	virtual ~HttpTunnelConsumer();
 
 public:
-	LINK(HttpTunnelConsumer, link);
+	//LINK(HttpTunnelConsumer, link);
 	HttpTunnelProducer *producer;
 	HttpTunnelProducer *self_producer;
 
 	HttpTunnelType_t vc_type;
-	VConnection *vc;
+	Connector *vc;
 	IOBufferReader *buffer_reader;
 	HttpConsumerHandler vc_handler;
 	VIO *write_vio;
@@ -40,7 +40,7 @@ public:
 	  @return @c true if any producer in the tunnel eventually feeds
 	  data to this consumer.
 	*/
-	bool is_downstream_from(VConnection* vc);
+	bool is_downstream_from(Connector* vc);
 	/** Check if this is a sink (final data destination).
 	  @return @c true if data exits the ATS process at this consumer.
 	*/

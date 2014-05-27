@@ -29,6 +29,7 @@
 #include "HTTP.h"
 #include "HdrToken.h"
 #include "Diags.h"
+#include "MIME.h"
 
 
 /***********************************************************************

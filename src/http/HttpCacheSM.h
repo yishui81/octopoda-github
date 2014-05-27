@@ -33,9 +33,9 @@
 #ifndef _HTTP_CACHE_SM_H_
 #define _HTTP_CACHE_SM_H_
 
-#include "P_Cache.h"
-#include "StatSystem.h"
-#include "ProxyConfig.h"
+//#include "P_Cache.h"
+//#include "StatSystem.h"
+//#include "ProxyConfig.h"
 #include "URL.h"
 #include "HTTP.h"
 #include "HttpConfig.h"
@@ -44,18 +44,18 @@ class HttpStateMachine;
 class HttpCacheSM;
 class CacheLookupHttpConfig;
 
-struct HttpCacheAction:public Action
-{
-  HttpCacheAction();
-  virtual void cancel(Continuation * c = NULL);
-  void init(HttpCacheSM * sm_arg)
-  {
-    sm = sm_arg;
-  };
-  HttpCacheSM *sm;
-};
+//struct HttpCacheAction:public Action
+//{
+//  HttpCacheAction();
+//  virtual void cancel(Continuation * c = NULL);
+//  void init(HttpCacheSM * sm_arg)
+//  {
+//    sm = sm_arg;
+//  };
+//  HttpCacheSM *sm;
+//};
 
-class HttpCacheSM:public Continuation
+class HttpCacheSM:public UTaskObj, Handle
 {
 public:
   HttpCacheSM();
@@ -63,13 +63,13 @@ public:
   void init(HttpStateMachine * sm_arg, ProxyMutex * amutex)
   {
     master_sm = sm_arg;
-    mutex = amutex;
-    captive_action.init(this);
+   // mutex = amutex;
+   // captive_action.init(this);
   }
 
-  Action *open_read(URL * url, HTTPHdr * hdr, CacheLookupHttpConfig * params, time_t pin_in_cache);
+  void open_read(URL * url, HTTPHdr * hdr, CacheLookupHttpConfig * params, time_t pin_in_cache);
 
-  Action *open_write(URL * url,
+  void open_write(URL * url,
                      HTTPHdr * request, CacheHTTPInfo * old_info, time_t pin_in_cache, bool retry, bool allow_multiple);
 
   CacheVConnection *cache_read_vc;
@@ -114,7 +114,7 @@ public:
   inline void close_write()
   {
     if (cache_write_vc) {
-      HTTP_DECREMENT_DYN_STAT(http_current_cache_connections_stat);
+      //HTTP_DECREMENT_DYN_STAT(http_current_cache_connections_stat);
       cache_write_vc->do_io(VIO::CLOSE);
       cache_write_vc = NULL;
     }
@@ -122,7 +122,7 @@ public:
   inline void close_read()
   {
     if (cache_read_vc) {
-      HTTP_DECREMENT_DYN_STAT(http_current_cache_connections_stat);
+     // HTTP_DECREMENT_DYN_STAT(http_current_cache_connections_stat);
       cache_read_vc->do_io(VIO::CLOSE);
       cache_read_vc = NULL;
     }
@@ -151,7 +151,7 @@ private:
   int state_cache_open_read(int event, void *data);
   int state_cache_open_write(int event, void *data);
 
-  HttpCacheAction captive_action;
+ // HttpCacheAction captive_action;
   bool open_read_cb;
   bool open_write_cb;
 

@@ -115,11 +115,20 @@ protected:
 
 	HttpTunnelProducer * setup_transfer_from_transform();
 
+	//HttpTransformInfo transform_info;
+	void 	setup_blind_tunnel_port();
+	void 	call_transact_and_set_next_state(TransactEntryFunc_t f);
+	void 	set_next_state();
+	void	perform_transform_cache_write_action();
 protected:
 	HttpClientSession*   client_session;
 	HTTPParser 		    	http_parser;
 	IOBufferReader * 	   ua_buffer_reader;
 	IOBufferReader *     ua_raw_buffer_reader;
+	HttpTunnel*				tunnel;
+	HttpRequest* 			request;
+
+	URE_Msg					sm_msg;
 
 private:
 	bool 			debug_on;
@@ -128,6 +137,8 @@ private:
 	int64_t     current_hook_type;
 	int64_t     current_hook_id;
 	int64_t		current_state;
+	int32_t		redirection_tries;
+	bool			enable_redirection;
 
 };
 

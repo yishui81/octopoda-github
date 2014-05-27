@@ -30,6 +30,7 @@
 #include "HTTP.h"
 #include "HttpCompat.h"
 #include "Error.h"
+#include "HdrToken.h"
 #include "InkErrno.h"
 
 ClassAllocator<CacheLookupHttpConfig> CacheLookupHttpConfigAllocator("CacheLookupHttpConfigAllocator");

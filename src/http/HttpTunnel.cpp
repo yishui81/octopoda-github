@@ -7,6 +7,8 @@
 
 #include "HttpTunnel.h"
 #include "BaseARE/UTaskObj.h"
+#include "Connector.h"
+#include "HttpStateMachine.h"
 
 /** @file
 
@@ -47,6 +49,7 @@
 //#include "HttpDebugNames.h"
 #include "ParseRules.h"
 #include "stdio.h"
+#include "P_IOBuffer.h"
 
 static const int max_chunked_ahead_blocks = 128;
 static const int min_block_transfer_bytes = 256;
@@ -90,6 +93,7 @@ HttpTunnel::HttpTunnel()
 		:num_producers(0),
 		num_consumers(0),
 		sm(NULL),
+		postbuf(NULL),
 		active(false)
 {
 
@@ -160,7 +164,7 @@ HttpTunnel::is_tunnel_alive()
 }
 
 inline HttpTunnelProducer *
-HttpTunnel::get_producer(VConnection * vc)
+HttpTunnel::get_producer(Connector * vc)
 {
 	for (int i = 0; i < MAX_PRODUCERS; i++) {
 
@@ -172,18 +176,18 @@ HttpTunnel::get_producer(VConnection * vc)
 	return NULL;
 }
 
-inline HttpTunnelConsumer *
-HttpTunnel::get_consumer(VConnection * vc)
-{
-	for (int i = 0; i < MAX_CONSUMERS; i++) {
-
-		if (consumers[i].vc == vc) {
-			return consumers + i;
-		}
-
-	}
-	return NULL;
-}
+//inline HttpTunnelConsumer *
+//HttpTunnel::get_consumer(Connector * vc)
+//{
+//	for (int i = 0; i < MAX_CONSUMERS; i++) {
+//
+//		if (consumers[i].vc == vc) {
+//			return consumers + i;
+//		}
+//
+//	}
+//	return NULL;
+//}
 
 inline HttpTunnelProducer *
 HttpTunnel::get_producer(VIO * vio)
@@ -237,7 +241,7 @@ HttpTunnel::has_cache_writer()
 }
 
 inline bool
-HttpTunnelConsumer::is_downstream_from(VConnection *vc)
+HttpTunnelConsumer::is_downstream_from(Connector *vc)
 {
 	HttpTunnelProducer* p = producer;
 	HttpTunnelConsumer* c;
@@ -304,14 +308,16 @@ HttpTunnel::FlowControl::FlowControl()
 }
 
 void
-HttpTunnel::init(HttpStateMachine * sm_arg, ProxyMutex * amutex)
+HttpTunnel::init(HttpStateMachine * sm_arg)
 {
-	  HttpConfigParams* params = sm_arg->t_state.http_config_param;
+//	  HttpConfigParams* params = sm_arg->t_state.http_config_param;
+	  HttpConfigParams* params = NULL;
 	  sm = sm_arg;
 	  active = false;
-	  mutex = amutex;
+//	  mutex = amutex;
 
-	  SET_HANDLER(&HttpTunnel::main_handler);
+	  //SET_HANDLER(&HttpTunnel::main_handler);
+	  set_handler(&HttpTunnel::main_handler);
 	  flow_state.enabled_p = params->oride.flow_control_enabled;
 	  if (params->oride.flow_low_water_mark > 0){
 		flow_state.low_water = params->oride.flow_low_water_mark;
@@ -449,7 +455,7 @@ HttpTunnel::set_producer_chunking_size(HttpTunnelProducer* p, int64_t size)
 //   Adds a new producer to the tunnel
 //
 HttpTunnelProducer *
-HttpTunnel::add_producer(VConnection * vc,
+HttpTunnel::add_producer(Connector * vc,
                          int64_t nbytes_arg,
                          IOBufferReader * reader_start,
                          HttpProducerHandler sm_handler,
@@ -458,7 +464,7 @@ HttpTunnel::add_producer(VConnection * vc,
 {
 	HttpTunnelProducer *p;
 
-	Debug("http_tunnel", "[%" PRId64 "] adding producer '%s'", sm->sm_id, name_arg);
+	//Debug("http_tunnel", "[%" PRId64 "] adding producer '%s'", sm->sm_id, name_arg);
 
 	ink_assert(reader_start->mbuf);
 	if ((p = alloc_producer()) != NULL) {
@@ -510,24 +516,25 @@ HttpTunnel::add_producer(VConnection * vc,
 //    false if the consumer was not added because the source failed
 //
 HttpTunnelConsumer *
-HttpTunnel::add_consumer(VConnection * vc,
-                         VConnection * producer,
+HttpTunnel::add_consumer(Connector * vc,
+                         Connector * producer,
                          HttpConsumerHandler sm_handler,
                          HttpTunnelType_t vc_type,
                          const char *name_arg,
                          int64_t skip_bytes)
 {
-	Debug("http_tunnel", "[%" PRId64 "] adding consumer '%s'", sm->sm_id, name_arg);
+	//Debug("http_tunnel", "[%" PRId64 "] adding consumer '%s'", sm->sm_id, name_arg);
 
 	// Find the producer entry
-	HttpTunnelProducer *p = get_producer(producer);
+	//HttpTunnelProducer *p = get_producer(producer);
+	HttpTunnelProducer *p = NULL;
 	ink_release_assert(p);
 
 	// Check to see if the producer terminated
 	//  without sending all of its data
 	if (p->alive == false &&
 			p->read_success == false) {
-		Debug("http_tunnel", "[%" PRId64 "] consumer '%s' not added due to producer failure", sm->sm_id, name_arg);
+		//Debug("http_tunnel", "[%" PRId64 "] consumer '%s' not added due to producer failure", sm->sm_id, name_arg);
 		return NULL;
 	}
 	// Initialize the consumer structure
@@ -541,7 +548,7 @@ HttpTunnel::add_consumer(VConnection * vc,
 	c->name = name_arg;
 
 	// Register the consumer with the producer
-	p->consumer_list.push(c);
+//	p->consumer_list.push(c);
 	p->num_consumers++;
 
 	return c;
@@ -588,7 +595,8 @@ HttpTunnel::tunnel_run(HttpTunnelProducer * p_arg)
 	//   back to say we are done
 	if (!is_tunnel_alive()) {
 		active = false;
-		sm->handleEvent(HTTP_TUNNEL_EVENT_DONE, this);
+		sm->do_handle((int) HTTP_TUNNEL_EVENT_DONE, (void*)this);
+		//sm->handleEvent(HTTP_TUNNEL_EVENT_DONE, this);
 	}
 }
 
@@ -739,7 +747,7 @@ HttpTunnel::producer_run(HttpTunnelProducer * p)
 		if (c_write == 0) {
 			// Nothing to do, call back the cleanup handlers
 			c->write_vio = NULL;
-			consumer_handler(VC_EVENT_WRITE_COMPLETE, c);
+			consumer_handler(CON_EVENT_WRITE_COMPLETE, c);
 		} else {
 			c->write_vio = c->vc->do_io_write(this, c_write, c->buffer_reader);
 			ink_assert(c_write > 0);
@@ -763,7 +771,7 @@ HttpTunnel::producer_run(HttpTunnelProducer * p)
 		if (p->buffer_start->read_avail() > HttpConfig::m_master.post_copy_size) {
 			Debug("http_redirect", "[HttpTunnel::producer_handler] post exceeds buffer limit, buffer_avail=%" PRId64" limit=%" PRId64"",
 			p->buffer_start->read_avail(), HttpConfig::m_master.post_copy_size);
-			sm->enable_redirection = false;
+		//	sm->enable_redirection = false;
 		} else {
 			// allocate post buffers with a new reader. The reader will be freed when p->read_buffer is freed
 			allocate_redirect_postdata_buffers(p->read_buffer->clone_reader(p->buffer_start));
@@ -779,7 +787,7 @@ HttpTunnel::producer_run(HttpTunnelProducer * p)
 
 		// If there is data to process in the buffer, do it now
 		if (p->chunked_handler.dechunked_reader->read_avail()){
-			producer_handler(VC_EVENT_READ_READY, p);
+			producer_handler(CON_EVENT_READ_READY, p);
 		}
 
 	} else if (p->do_dechunking || p->do_chunked_passthru) {
@@ -805,7 +813,7 @@ HttpTunnel::producer_run(HttpTunnelProducer * p)
 		//p->chunked_handler.skip_bytes);
 
 		if (p->chunked_handler.chunked_reader->read_avail()) {
-			producer_handler(VC_EVENT_READ_READY, p);
+			producer_handler(CON_EVENT_READ_READY, p);
 		} else if (sm->redirection_tries > 0 && p->vc_type == HT_HTTP_CLIENT) {
 			// read_avail() == 0
 			// [bug 2579251]
@@ -852,14 +860,14 @@ HttpTunnel::producer_handler_dechunked(int event, HttpTunnelProducer * p)
 {
 	ink_assert(p->do_chunking);
 
-	Debug("http_tunnel", "[%" PRId64 "] producer_handler_dechunked [%s %s]", sm->sm_id, p->name, HttpDebugNames::get_event_name(event));
+	//Debug("http_tunnel", "[%" PRId64 "] producer_handler_dechunked [%s %s]", sm->sm_id, p->name, HttpDebugNames::get_event_name(event));
 
 	// We only interested in translating certain events
 	switch (event) {
-		case VC_EVENT_READ_READY:
-		case VC_EVENT_READ_COMPLETE:
+		case CON_EVENT_READ_READY:
+		case CON_EVENT_READ_COMPLETE:
 		case HTTP_TUNNEL_EVENT_PRECOMPLETE:
-		case VC_EVENT_EOS:
+		case CON_EVENT_EOS:
 			p->last_event =
 			  p->chunked_handler.last_server_event = event;
 			// TODO: Should we check the return code?
@@ -884,14 +892,14 @@ HttpTunnel::producer_handler_chunked(int event, HttpTunnelProducer * p)
 {
 	ink_assert(p->do_dechunking || p->do_chunked_passthru);
 
-	Debug("http_tunnel", "[%" PRId64 "] producer_handler_chunked [%s %s]", sm->sm_id, p->name, HttpDebugNames::get_event_name(event));
+	//Debug("http_tunnel", "[%" PRId64 "] producer_handler_chunked [%s %s]", sm->sm_id, p->name, HttpDebugNames::get_event_name(event));
 
 	// We only interested in translating certain events
 	switch (event) {
-		case VC_EVENT_READ_READY:
-		case VC_EVENT_READ_COMPLETE:
+		case CON_EVENT_READ_READY:
+		case CON_EVENT_READ_COMPLETE:
 		case HTTP_TUNNEL_EVENT_PRECOMPLETE:
-		case VC_EVENT_EOS:
+		case CON_EVENT_EOS:
 			break;
 		default:
 			return event;
@@ -909,18 +917,18 @@ HttpTunnel::producer_handler_chunked(int event, HttpTunnelProducer * p)
 		// FIX ME: we return EOS here since it will cause the
 		//  the client to be reenabled.  ERROR makes more
 		//  sense but no reenables follow
-		return VC_EVENT_EOS;
+		return CON_EVENT_EOS;
 	}
 
 	switch (event) {
-		case VC_EVENT_READ_READY:
+		case CON_EVENT_READ_READY:
 			if (done) {
-				return VC_EVENT_READ_COMPLETE;
+				return CON_EVENT_READ_COMPLETE;
 			}
 			break;
 		case HTTP_TUNNEL_EVENT_PRECOMPLETE:
-		case VC_EVENT_EOS:
-		case VC_EVENT_READ_COMPLETE:
+		case CON_EVENT_EOS:
+		case CON_EVENT_READ_COMPLETE:
 			if (!done) {
 				p->chunked_handler.truncation = true;
 			}
@@ -947,7 +955,7 @@ bool HttpTunnel::producer_handler(int event, HttpTunnelProducer * p)
 	HttpProducerHandler jump_point;
 	bool sm_callback = false;
 
-	Debug("http_tunnel", "[%" PRId64 "] producer_handler [%s %s]", sm->sm_id, p->name, HttpDebugNames::get_event_name(event));
+	//Debug("http_tunnel", "[%" PRId64 "] producer_handler [%s %s]", sm->sm_id, p->name, HttpDebugNames::get_event_name(event));
 
 	// Handle chunking/dechunking/chunked-passthrough if necessary.
 	if (p->do_chunking) {
@@ -958,7 +966,7 @@ bool HttpTunnel::producer_handler(int event, HttpTunnelProducer * p)
 		// chunk in the the function call above.  We are done with the
 		// tunnel.
 		if (event == HTTP_TUNNEL_EVENT_PRECOMPLETE) {
-		  event = VC_EVENT_EOS;
+		  event = CON_EVENT_EOS;
 		}
 
 	} else if (p->do_dechunking || p->do_chunked_passthru) {
@@ -970,9 +978,10 @@ bool HttpTunnel::producer_handler(int event, HttpTunnelProducer * p)
 	//YTS Team, yamsat Plugin
 	//Copy partial POST data to buffers. Check for the various parameters including
 	//the maximum configured post data size
-	if (sm->t_state.method == HTTP_WKSIDX_POST
-			&& sm->enable_redirection
-			&&(event == VC_EVENT_READ_READY || event == VC_EVENT_READ_COMPLETE)
+	if (
+			//sm->t_state.method == HTTP_WKSIDX_POST&&
+			sm->enable_redirection
+			&&(event == CON_EVENT_READ_READY || event == CON_EVENT_READ_COMPLETE)
 			&& (p->vc_type == HT_HTTP_CLIENT)) {
 
 		Debug("http_redirect", "[HttpTunnel::producer_handler] [%s %s]", p->name, HttpDebugNames::get_event_name(event));
@@ -986,19 +995,19 @@ bool HttpTunnel::producer_handler(int event, HttpTunnelProducer * p)
 					HttpConfig::m_master.post_copy_size);
 
 			  deallocate_redirect_postdata_buffers();
-			  sm->enable_redirection = false;
+			 // sm->enable_redirection = false;
 		} else {
 			copy_partial_post_data();
 		}
 	}                             //end of added logic for partial copy of POST
 
-	Debug("http_redirect", "[HttpTunnel::producer_handler] enable_redirection: [%d %d %d] event: %d",
-		p->alive == true, sm->enable_redirection, (p->self_consumer && p->self_consumer->alive == true), event);
-	ink_assert(p->alive == true || event == HTTP_TUNNEL_EVENT_PRECOMPLETE || event == VC_EVENT_EOS ||
-			 sm->enable_redirection || (p->self_consumer && p->self_consumer->alive == true));
+//	Debug("http_redirect", "[HttpTunnel::producer_handler] enable_redirection: [%d %d %d] event: %d",
+//		p->alive == true, sm->enable_redirection, (p->self_consumer && p->self_consumer->alive == true), event);
+//	ink_assert(p->alive == true || event == HTTP_TUNNEL_EVENT_PRECOMPLETE || event == VC_EVENT_EOS ||
+//			 sm->enable_redirection || (p->self_consumer && p->self_consumer->alive == true));
 
 	switch (event) {
-		case VC_EVENT_READ_READY:
+		case CON_EVENT_READ_READY:
 			// Data read from producer, reenable consumers
 			for (c = p->consumer_list.head; c; c = c->link.next) {
 			  if (c->alive) {
@@ -1022,8 +1031,8 @@ bool HttpTunnel::producer_handler(int event, HttpTunnelProducer * p)
 			sm_callback = true;
 			break;
 
-		case VC_EVENT_READ_COMPLETE:
-		case VC_EVENT_EOS:
+		case CON_EVENT_READ_COMPLETE:
+		case CON_EVENT_EOS:
 
 			// The producer completed
 			p->alive = false;
@@ -1057,9 +1066,9 @@ bool HttpTunnel::producer_handler(int event, HttpTunnelProducer * p)
 			}
 			break;
 
-		case VC_EVENT_ERROR:
-		case VC_EVENT_ACTIVE_TIMEOUT:
-		case VC_EVENT_INACTIVITY_TIMEOUT:
+		case CON_EVENT_ERROR:
+//		case CON_EVENT_ACTIVE_TIMEOUT:
+//		case CON_EVENT_INACTIVITY_TIMEOUT:
 		case HTTP_TUNNEL_EVENT_CONSUMER_DETACH:
 			p->alive = false;
 			p->bytes_read = p->read_vio->ndone;
@@ -1069,8 +1078,8 @@ bool HttpTunnel::producer_handler(int event, HttpTunnelProducer * p)
 			sm_callback = true;
 			break;
 
-		case VC_EVENT_WRITE_READY:
-		case VC_EVENT_WRITE_COMPLETE:
+		case CON_EVENT_WRITE_READY:
+		case CON_EVENT_WRITE_COMPLETE:
 		default:
 			// Producers should not get these events
 			ink_release_assert(0);
@@ -1118,7 +1127,7 @@ HttpTunnel::consumer_reenable(HttpTunnelConsumer* c)
           srcp->unthrottle();
           srcp->read_vio->reenable();
           // Kick source producer to get flow ... well, flowing.
-          this->producer_handler(VC_EVENT_READ_READY, srcp);
+          producer_handler(CON_EVENT_READ_READY, srcp);
         }
       }
       p->read_vio->reenable();
@@ -1144,20 +1153,20 @@ bool HttpTunnel::consumer_handler(int event, HttpTunnelConsumer * c)
 	HttpConsumerHandler jump_point;
 	HttpTunnelProducer* p = c->producer;
 
-	Debug("http_tunnel", "[%" PRId64 "] consumer_handler [%s %s]", sm->sm_id, c->name, HttpDebugNames::get_event_name(event));
+	//Debug("http_tunnel", "[%" PRId64 "] consumer_handler [%s %s]", sm->sm_id, c->name, HttpDebugNames::get_event_name(event));
 
 	ink_assert(c->alive == true);
 
 	switch (event) {
-	case VC_EVENT_WRITE_READY:
+	case CON_EVENT_WRITE_READY:
 		this->consumer_reenable(c);
 		break;
 
-	case VC_EVENT_WRITE_COMPLETE:
-	case VC_EVENT_EOS:
-	case VC_EVENT_ERROR:
-	case VC_EVENT_ACTIVE_TIMEOUT:
-	case VC_EVENT_INACTIVITY_TIMEOUT:
+	case CON_EVENT_WRITE_COMPLETE:
+	case CON_EVENT_EOS:
+	case CON_EVENT_ERROR:
+//	case CON_EVENT_ACTIVE_TIMEOUT:
+//	case CON_EVENT_INACTIVITY_TIMEOUT:
 		ink_assert(c->alive);
 		ink_assert(c->buffer_reader);
 		c->alive = false;
@@ -1179,7 +1188,7 @@ bool HttpTunnel::consumer_handler(int event, HttpTunnelConsumer * c)
 		//   possbile to put more stuff in the buffer
 		// Note: we reenable only after calling back
 		//    the SM since the reenabling has the side effect
-		//    updating the buffer state for the VConnection
+		//    updating the buffer state for the Connector
 		//    that is being reenabled
 		if (p->alive && p->read_vio
 			#ifndef LAZY_BUF_ALLOC
@@ -1199,8 +1208,8 @@ bool HttpTunnel::consumer_handler(int event, HttpTunnelConsumer * c)
 		}
 		break;
 
-	case VC_EVENT_READ_READY:
-	case VC_EVENT_READ_COMPLETE:
+	case CON_EVENT_READ_READY:
+	case CON_EVENT_READ_COMPLETE:
 	default:
 		// Consumers should not get these events
 		ink_release_assert(0);
@@ -1306,7 +1315,7 @@ HttpTunnel::finish_all_internal(HttpTunnelProducer * p, bool chain)
 			//   nothing to do and take the appripriate
 			//   action
 			if (c->write_vio->nbytes == c->write_vio->ndone) {
-				consumer_handler(VC_EVENT_WRITE_COMPLETE, c);
+				consumer_handler(CON_EVENT_WRITE_COMPLETE, c);
 			}
 		}
 
@@ -1334,7 +1343,7 @@ HttpTunnel::chain_abort_cache_write(HttpTunnelProducer * p)
 				c->write_vio = NULL;
 				c->vc->do_io_close(EHTTP_ERROR);
 				c->alive = false;
-				HTTP_DECREMENT_DYN_STAT(http_current_cache_connections_stat);
+				//HTTP_DECREMENT_DYN_STAT(http_current_cache_connections_stat);
 
 			  } else if (c->self_producer) {
 				chain_abort_cache_write(c->self_producer);
@@ -1416,11 +1425,12 @@ HttpTunnel::main_handler(int event, void *data)
 
 	// We called a vc handler, the tunnel might be
 	//  finished.  Check to see if there are any remaining
-	//  VConnections alive.  If not, notifiy the state machine
+	//  Connectors alive.  If not, notifiy the state machine
 	//
 	if (sm_callback && !is_tunnel_alive()) {
 		active = false;
-		sm->handleEvent(HTTP_TUNNEL_EVENT_DONE, this);
+		sm->do_handle(HTTP_TUNNEL_EVENT_DONE, this);
+		//sm->handleEvent(HTTP_TUNNEL_EVENT_DONE, this);
 		return EVENT_DONE;
 	}
 	return EVENT_CONT;
@@ -1432,7 +1442,7 @@ HttpTunnel::update_stats_after_abort(HttpTunnelType_t t)
 	switch (t) {
 	case HT_CACHE_READ:
 	case HT_CACHE_WRITE:
-		HTTP_DECREMENT_DYN_STAT(http_current_cache_connections_stat);
+		//HTTP_DECREMENT_DYN_STAT(http_current_cache_connections_stat);
 		break;
 	default:
 		// Handled here:
@@ -1464,7 +1474,8 @@ HttpTunnel::copy_partial_post_data()
 void
 HttpTunnel::allocate_redirect_postdata_producer_buffer()
 {
-	int64_t alloc_index = buffer_size_to_index(sm->t_state.hdr_info.request_content_length);
+	//	int64_t alloc_index = buffer_size_to_index(sm->t_state.hdr_info.request_content_length);
+	int64_t alloc_index = 0;
 
 	ink_release_assert(postbuf->postdata_producer_buffer == NULL);
 
@@ -1477,7 +1488,9 @@ HttpTunnel::allocate_redirect_postdata_producer_buffer()
 void
 HttpTunnel::allocate_redirect_postdata_buffers(IOBufferReader * ua_reader)
 {
-	int64_t alloc_index = buffer_size_to_index(sm->t_state.hdr_info.request_content_length);
+	//int64_t alloc_index = buffer_size_to_index(sm->t_state.hdr_info.request_content_length);
+	int64_t alloc_index = 0;
+	//buffer_size_to_index(sm->t_state.hdr_info.request_content_length);
 
 	Debug("http_redirect", "[HttpTunnel::allocate_postdata_buffers]");
 

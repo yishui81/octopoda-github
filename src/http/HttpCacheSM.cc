@@ -31,13 +31,14 @@
  ****************************************************************************/
 
 #include "HttpCacheSM.h"
-#include "HttpSM.h"
-#include "HttpDebugNames.h"
+#include "HttpStateMachine.h"
+#include "UTaskObj.h"
+//#include "HttpDebugNames.h"
 
-#define STATE_ENTER(state_name, event) { \
-        REMEMBER(event, -1); \
-        Debug("http_cache", "[%" PRId64 "] [%s, %s]", master_sm->sm_id, \
-        #state_name, HttpDebugNames::get_event_name(event)); }
+//#define STATE_ENTER(state_name, event) { \
+//        REMEMBER(event, -1); \
+//        Debug("http_cache", "[%" PRId64 "] [%s, %s]", master_sm->sm_id, \
+//        #state_name, HttpDebugNames::get_event_name(event)); }
 
 #define __REMEMBER(x)  #x
 #define _REMEMBER(x)   __REMEMBER(x)
@@ -45,26 +46,26 @@
 #define REMEMBER(e,r) master_sm->add_history_entry(__FILE__ ":" _REMEMBER (__LINE__), e, r);
 
 
-HttpCacheAction::HttpCacheAction()
-	  : sm(NULL)
-{
-
-}
-
-void
-HttpCacheAction::cancel(Continuation * c)
-{
-	ink_assert(c == NULL || c == sm->master_sm);
-	ink_assert(this->cancelled == 0);
-
-	this->cancelled = 1;
-	if (sm->pending_action){
-		sm->pending_action->cancel();
-	}
-}
+//HttpCacheAction::HttpCacheAction()
+//	  : sm(NULL)
+//{
+//
+//}
+//
+//void
+//HttpCacheAction::cancel(Continuation * c)
+//{
+//	ink_assert(c == NULL || c == sm->master_sm);
+//	ink_assert(this->cancelled == 0);
+//
+//	this->cancelled = 1;
+//	if (sm->pending_action){
+//		sm->pending_action->cancel();
+//	}
+//}
 
 HttpCacheSM::HttpCacheSM():
-	Continuation(NULL),
+	//UTaskObj(NULL),
 	cache_read_vc(NULL),
 	cache_write_vc(NULL),
 	read_locked(false),
@@ -72,7 +73,7 @@ HttpCacheSM::HttpCacheSM():
 	readwhilewrite_inprogress(false),
 	master_sm(NULL),
 	pending_action(NULL),
-	captive_action(),
+	//captive_action(),
 	open_read_cb(false),
 	open_write_cb(false),
 	open_read_tries(0),
@@ -118,15 +119,15 @@ HttpCacheSM::HttpCacheSM():
 int
 HttpCacheSM::state_cache_open_read(int event, void *data)
 {
-	STATE_ENTER(&HttpCacheSM::state_cache_open_read, event);
-	ink_assert(captive_action.cancelled == 0);
+//	STATE_ENTER(&HttpCacheSM::state_cache_open_read, event);
+//	ink_assert(captive_action.cancelled == 0);
 
 	pending_action = NULL;
 
 	switch (event) {
 
 	case CACHE_EVENT_OPEN_READ:
-		HTTP_INCREMENT_DYN_STAT(http_current_cache_connections_stat);
+		//HTTP_INCREMENT_DYN_STAT(http_current_cache_connections_stat);
 		ink_assert(cache_read_vc == NULL);
 		open_read_cb = true;
 		cache_read_vc = (CacheVConnection *) data;
@@ -175,8 +176,8 @@ HttpCacheSM::state_cache_open_read(int event, void *data)
 int
 HttpCacheSM::state_cache_open_write(int event, void *data)
 {
-	STATE_ENTER(&HttpCacheSM::state_cache_open_write, event);
-	ink_assert(captive_action.cancelled == 0);
+//	STATE_ENTER(&HttpCacheSM::state_cache_open_write, event);
+//	ink_assert(captive_action.cancelled == 0);
 
 	pending_action = NULL;
 
@@ -220,7 +221,7 @@ HttpCacheSM::do_schedule_in()
 	return;
 }
 
-Action *
+void
 HttpCacheSM::do_cache_open_read()
 {
 	open_read_tries++;
@@ -236,36 +237,38 @@ HttpCacheSM::do_cache_open_read()
 
 	}
 
-	//Initialising read-while-write-inprogress flag
-	this->readwhilewrite_inprogress = false;
-	Action *action_handle = cacheProcessor.open_read(this, this->lookup_url, master_sm->t_state.cache_control.cluster_cache_local, this->read_request_hdr, this->read_config,
-											   this->read_pin_in_cache);
-
-	if (action_handle != ACTION_RESULT_DONE) {
-
-		pending_action = action_handle;
-
-	}
+//	//Initialising read-while-write-inprogress flag
+//	this->readwhilewrite_inprogress = false;
+//	Action *action_handle = cacheProcessor.open_read(this, this->lookup_url, master_sm->t_state.cache_control.cluster_cache_local, this->read_request_hdr, this->read_config,
+//											   this->read_pin_in_cache);
+//
+//	if (action_handle != ACTION_RESULT_DONE) {
+//
+//		pending_action = action_handle;
+//
+//	}
 	// Check to see if we've already called the user back
 	//  If we have then it's ACTION_RESULT_DONE, other wise
 	//  return our captive action and ensure that we are actually
 	//  doing something useful
 	if (open_read_cb == true) {
 
-		return ACTION_RESULT_DONE;
+		//return ACTION_RESULT_DONE;
+		return;
 
 	} else {
 
 		ink_assert(pending_action != NULL || write_locked == true);
-		return &captive_action;
+		//return &captive_action;
+		return;
 
 	}
 }
 
-Action *
+void
 HttpCacheSM::open_read(URL * url, HTTPHdr * hdr, CacheLookupHttpConfig * params, time_t pin_in_cache)
 {
-	Action *act_return;
+	//Action *act_return;
 
 	lookup_url = url;
 	read_request_hdr = hdr;
@@ -274,12 +277,12 @@ HttpCacheSM::open_read(URL * url, HTTPHdr * hdr, CacheLookupHttpConfig * params,
 
 	ink_assert(pending_action == NULL);
 
-	SET_HANDLER(&HttpCacheSM::state_cache_open_read);
+	set_handler(&HttpCacheSM::state_cache_open_read);
 
 	lookup_max_recursive++;
 	current_lookup_level++;
 	open_read_cb = false;
-	act_return = do_cache_open_read();
+	//act_return = do_cache_open_read();
 
 	// the following logic is based on the assumption that the secnod
 	// lookup won't happen if the HttpSM hasn't been called back for the
@@ -295,7 +298,8 @@ HttpCacheSM::open_read(URL * url, HTTPHdr * hdr, CacheLookupHttpConfig * params,
 			lookup_max_recursive = 0;
 
 		}
-		return act_return;
+		return;
+		//return act_return;
 
 	} else {
 
@@ -308,15 +312,16 @@ HttpCacheSM::open_read(URL * url, HTTPHdr * hdr, CacheLookupHttpConfig * params,
 
 		}
 
-		return ACTION_RESULT_DONE;
+		//return ACTION_RESULT_DONE;
+		return;
 	}
 }
 
-Action *
+void
 HttpCacheSM::open_write(URL * url, HTTPHdr * request, CacheHTTPInfo * old_info, time_t pin_in_cache,
 			bool retry, bool allow_multiple)
 {
-	SET_HANDLER(&HttpCacheSM::state_cache_open_write);
+	set_handler(&HttpCacheSM::state_cache_open_write);
 
 	ink_assert(pending_action == NULL);
 	ink_assert(cache_write_vc == NULL);
@@ -339,27 +344,30 @@ HttpCacheSM::open_write(URL * url, HTTPHdr * request, CacheHTTPInfo * old_info, 
 	//  a new write (could happen on a very busy document
 	//  that must be revalidated every time)
 	// Changed by YTS Team, yamsat Plugin
-	if (open_write_tries > master_sm->redirection_tries &&
-			open_write_tries >master_sm->t_state.http_config_param->max_cache_open_write_retries) {
-
-		master_sm->handleEvent(CACHE_EVENT_OPEN_WRITE_FAILED, (void *) -ECACHE_DOC_BUSY);
-		return ACTION_RESULT_DONE;
+	if (open_write_tries > master_sm->redirection_tries
+			//&&open_write_tries >master_sm->t_state.http_config_param->max_cache_open_write_retries
+			) {
+		master_sm->do_handle(CACHE_EVENT_OPEN_WRITE_FAILED, (void *) -ECACHE_DOC_BUSY);
+		//master_sm->handleEvent(CACHE_EVENT_OPEN_WRITE_FAILED, (void *) -ECACHE_DOC_BUSY);
+		//return ACTION_RESULT_DONE;
+		return;
 
 	}
 
-	Action *action_handle = cacheProcessor.open_write(this,
-											0,
-											url,
-											master_sm->t_state.cache_control.cluster_cache_local,
-											request,
-											// INKqa11166
-											allow_multiple ? (CacheHTTPInfo *) CACHE_ALLOW_MULTIPLE_WRITES :
-											old_info,
-											pin_in_cache);
+	//Action *action_handle =
+//					cacheProcessor.open_write(this,
+//											0,
+//											url,
+//		//									master_sm->t_state.cache_control.cluster_cache_local,
+//											request,
+//											// INKqa11166
+//		//									allow_multiple ? (CacheHTTPInfo *) CACHE_ALLOW_MULTIPLE_WRITES :
+//											old_info,
+//											pin_in_cache);
 
-	if (action_handle != ACTION_RESULT_DONE) {
-		pending_action = action_handle;
-	}
+//	if (action_handle != ACTION_RESULT_DONE) {
+//		pending_action = action_handle;
+//	}
 
 	// Check to see if we've already called the user back
 	//  If we have then it's ACTION_RESULT_DONE, other wise
@@ -367,12 +375,13 @@ HttpCacheSM::open_write(URL * url, HTTPHdr * request, CacheHTTPInfo * old_info, 
 	//  doing something useful
 	if (open_write_cb == true) {
 
-		return ACTION_RESULT_DONE;
+//		return ACTION_RESULT_DONE;
+		return;
 
 	} else {
 
 		ink_assert(pending_action != NULL);
-		return &captive_action;
-
+//		return &captive_action;
+		return;
 	}
 }
