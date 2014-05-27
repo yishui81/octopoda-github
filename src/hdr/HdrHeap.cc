@@ -34,7 +34,7 @@
 #include "HdrHeap.h"
 #include "URL.h"
 #include "MIME.h"
-#include "HTTP.h"
+#include "Http.h"
 //#include "I_EventSystem.h"
 
 #define MAX_LOST_STR_SPACE 1024
