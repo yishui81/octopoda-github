@@ -5,16 +5,16 @@
  *      Author: jacky
  */
 
-#ifndef HTTPRESPONE_H_
-#define HTTPRESPONE_H_
+#ifndef HTTPRESPONSE_H_
+#define HTTPRESPONSE_H_
 
 /*
  *
  */
-class HttpRespone {
+class HttpResponse {
 public:
-	HttpRespone();
-	virtual ~HttpRespone();
+	HttpResponse();
+	virtual ~HttpResponse();
 };
 
 #endif /* HTTPRESPONE_H_ */

@@ -6,17 +6,8 @@
  */
 
 #include "HttpInfo.h"
+#include "Http.h"
 
-
-
-HttpInfo::HttpInfo() {
-	// TODO Auto-generated constructor stub
-
-}
-
-HttpInfo::~HttpInfo() {
-	// TODO Auto-generated destructor stub
-}
 
 inline void
 HttpInfo::destroy()
@@ -119,8 +110,7 @@ HttpInfo::get_frag_offset_count() {
 void
 HttpInfo::create()
 {
-	m_alt = HttpCacheAlt::alloc();
-			HttpCacheAltAllocator.alloc();
+	m_alt = HttpCacheAltAllocator.alloc();
 }
 
 void
@@ -330,7 +320,7 @@ HttpInfo::unmarshal(char *buf, int len, RefCountObj *block_ref)
 		tmp = heap->unmarshal(len, HDR_HEAP_OBJ_HTTP_HEADER, (HdrHeapObjImpl **) & hh, block_ref);
 		if (hh == NULL || tmp < 0) {
 
-			ink_assert(!"HttpInfo::request unmarshal failed");
+			//ink_assert(!"HttpInfo::request unmarshal failed");
 			return -1;
 
 		}

@@ -9,6 +9,12 @@
 #define HTTPHEADER_H_
 #include "HdrHeap.h"
 
+enum TransferEncoding_t
+{
+	NO_TRANSFER_ENCODING = 0,
+	CHUNKED_ENCODING,
+	DEFLATE_ENCODING
+};
 
 class HttpHeaderImpl:public HdrHeapObjImpl
 {

@@ -5,14 +5,14 @@
  *      Author: jacky
  */
 
-#include "HttpRespone.h"
+#include "HttpResponse.h"
 
-HttpRespone::HttpRespone() {
+HttpResponse::HttpResponse() {
 	// TODO Auto-generated constructor stub
 
 }
 
-HttpRespone::~HttpRespone() {
+HttpResponse::~HttpResponse() {
 	// TODO Auto-generated destructor stub
 }
 

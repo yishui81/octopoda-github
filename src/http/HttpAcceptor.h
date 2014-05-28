@@ -9,8 +9,8 @@
 #define HTTPACCEPTOR_H_
 #include <BaseARE/UTaskObj.h>
 #include "Acceptor.h"
-#include "ts/ink_inet.h"
-#include "ts/ink_resolver.h"
+#include "ink_inet.h"
+#include "ink_resolver.h"
 /*
  *
  */

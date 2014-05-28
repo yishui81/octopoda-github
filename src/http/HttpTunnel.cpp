@@ -9,6 +9,7 @@
 #include "BaseARE/UTaskObj.h"
 #include "Connector.h"
 #include "HttpStateMachine.h"
+#include "Http.h"
 
 /** @file
 
@@ -51,13 +52,13 @@
 #include "stdio.h"
 #include "P_IOBuffer.h"
 
-static const int max_chunked_ahead_blocks = 128;
-static const int min_block_transfer_bytes = 256;
-static char const * const CHUNK_HEADER_FMT = "%" PRIx64"\r\n";
+//static const int max_chunked_ahead_blocks = 128;
+//static const int min_block_transfer_bytes = 256;
+//static char const * const CHUNK_HEADER_FMT = "%" PRIx64"\r\n";
 // This should be as small as possible because it will only hold the
 // header and trailer per chunk - the chunk body will be a reference to
 // a block in the input stream.
-static int const CHUNK_IOBUFFER_SIZE_INDEX = MIN_IOBUFFER_SIZE;
+//static int const CHUNK_IOBUFFER_SIZE_INDEX = MIN_IOBUFFER_SIZE;
 
 char
 VcTypeCode(HttpTunnelType_t t) {
@@ -176,18 +177,18 @@ HttpTunnel::get_producer(Connector * vc)
 	return NULL;
 }
 
-//inline HttpTunnelConsumer *
-//HttpTunnel::get_consumer(Connector * vc)
-//{
-//	for (int i = 0; i < MAX_CONSUMERS; i++) {
-//
-//		if (consumers[i].vc == vc) {
-//			return consumers + i;
-//		}
-//
-//	}
-//	return NULL;
-//}
+HttpTunnelConsumer *
+HttpTunnel::get_consumer(Connector * vc)
+{
+	for (int i = 0; i < MAX_CONSUMERS; i++) {
+
+		if (consumers[i].vc == vc) {
+			return consumers + i;
+		}
+
+	}
+	return NULL;
+}
 
 inline HttpTunnelProducer *
 HttpTunnel::get_producer(VIO * vio)
@@ -203,7 +204,7 @@ HttpTunnel::get_producer(VIO * vio)
 	return NULL;
 }
 
-inline HttpTunnelConsumer *
+HttpTunnelConsumer *
 HttpTunnel::get_consumer(VIO * vio)
 {
 	for (int i = 0; i < MAX_CONSUMERS; i++) {
@@ -680,7 +681,8 @@ HttpTunnel::producer_run(HttpTunnelProducer * p)
 
 	int64_t read_start_pos = 0;
 	if (p->vc_type == HT_CACHE_READ &&
-			sm->t_state.range_setup == HttpTransact::RANGE_NOT_TRANSFORM_REQUESTED) {
+			sm->t_state.range_setup == HttpTransact::RANGE_NOT_TRANSFORM_REQUESTED
+			) {
 		ink_assert(sm->t_state.num_range_fields == 1); // we current just support only one range entry
 		read_start_pos = sm->t_state.ranges[0]._start;
 		producer_n = (sm->t_state.ranges[0]._end - sm->t_state.ranges[0]._start)+1;

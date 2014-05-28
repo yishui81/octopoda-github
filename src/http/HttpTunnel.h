@@ -16,8 +16,8 @@
 #include "I_IOBuffer.h"
 #include "Connector.h"
 #include "Handle.h"
-#include "HttpTunnelProducer.h"
-#include "HttpTunnelConsumer.h"
+#include "Http.h"
+
 //#include "P_EventSystem.h"
 
 static const int max_chunked_ahead_blocks = 128;
@@ -29,18 +29,13 @@ static char const * const CHUNK_HEADER_FMT = "%" PRIx64"\r\n";
 static int const CHUNK_IOBUFFER_SIZE_INDEX = MIN_IOBUFFER_SIZE;
 
 // Get rid of any previous definition first... /leif
-#ifdef MAX_PRODUCERS
-#undef MAX_PRODUCERS
-#endif
-#ifdef MAX_CONSUMERS
-#undef MAX_CONSUMERS
-#endif
-#define MAX_PRODUCERS   2
-#define MAX_CONSUMERS   4
+//#ifdef MAX_PRODUCERS
+//#undef MAX_PRODUCERS
+//#endif
+//#ifdef MAX_CONSUMERS
+//#undef MAX_CONSUMERS
+//#endif
 
-#define HTTP_TUNNEL_EVENT_DONE             (HTTP_TUNNEL_EVENTS_START + 1)
-#define HTTP_TUNNEL_EVENT_PRECOMPLETE      (HTTP_TUNNEL_EVENTS_START + 2)
-#define HTTP_TUNNEL_EVENT_CONSUMER_DETACH  (HTTP_TUNNEL_EVENTS_START + 3)
 
 #define HTTP_TUNNEL_STATIC_PRODUCER  (Connetor*)!0
 
@@ -67,8 +62,6 @@ enum HttpTunnelType_t
 	  HT_TRANSFORM,
 	  HT_STATIC
 };
-
-
 
 
 class PostDataBuffers
@@ -137,7 +130,7 @@ public:
 	void allocate_redirect_postdata_buffers(IOBufferReader * ua_reader);
 	void deallocate_redirect_postdata_buffers();
 
-	HttpTunnelProducer *add_producer(Connetor * vc,
+	HttpTunnelProducer *add_producer(Connector * vc,
 							   int64_t nbytes,
 							   IOBufferReader * reader_start,
 							   HttpProducerHandler sm_handler,
@@ -149,8 +142,8 @@ public:
 	/// Set the maximum (preferred) chunk @a size of chunked output for @a producer.
 	void set_producer_chunking_size(HttpTunnelProducer* producer, int64_t size);
 
-	HttpTunnelConsumer *add_consumer(Connetor * vc,
-							   Connetor * producer,
+	HttpTunnelConsumer *add_consumer(Connector * vc,
+								Connector * producer,
 							   HttpConsumerHandler sm_handler,
 							   HttpTunnelType_t vc_type,
 							   const char *name,
@@ -158,8 +151,9 @@ public:
 
 	int deallocate_buffers();
 	//DLL<HttpTunnelConsumer> *get_consumers(Connetor * vc);
-	HttpTunnelProducer *get_producer(Connetor * vc);
-	HttpTunnelConsumer *get_consumer(Connetor * vc);
+	//HttpTunnelProducer *get_producer(Connetor * vc);
+	HttpTunnelProducer *get_producer(Connector * vc);
+	HttpTunnelConsumer *get_consumer(Connector * vc);
 	void tunnel_run(HttpTunnelProducer * p = NULL);
 
 	int main_handler(int event, void *data);

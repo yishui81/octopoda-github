@@ -11,6 +11,7 @@
 /*
  *
  */
+#define MAX_CONSUMERS 5
 class HttpTunnelConsumer
 {
 public:

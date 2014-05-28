@@ -51,6 +51,7 @@ HttpStateMachine::handle_open  (const URE_Msg& msg)
 	msg.SetType(HTTP_SM_START);
 
 	current_hook_type = HTTP_SM_START;
+	request = new HttpRequest(this);
 	do_api_callout();
 
 	return 0;
@@ -101,9 +102,14 @@ HttpStateMachine::do_api_callout()
 {
 	switch(current_hook_type){
 	case HTTP_SM_START:
-		//TODO
-	   setup_blind_tunnel_port();
-		setup_client_read_request_header();
+		if (request->port_attribute == TRANSPORT_BLIND_TUNNEL)
+		{
+			setup_blind_tunnel_port();
+		}
+		else
+		{
+			setup_client_read_request_header();
+		}
 		break;
 
 	case HTTP_READ_REQUEST_HDR:
@@ -125,7 +131,6 @@ HttpStateMachine::do_api_callout()
 	case HTTP_REDIRECT_READ:
 	case HTTP_SM_SHUTDOWN:
 	    //state_remove_from_list(EVENT_NONE, NULL);
-
 	    return 0;
 	  default:
 	    //ink_release_assert("! Not reached");
@@ -133,49 +138,49 @@ HttpStateMachine::do_api_callout()
 	}
 
 	switch (current_hook_id) {
-		  case HttpTransact::TRANSFORM_READ:
+		  case TRANSFORM_READ:
 		    {
 		      HttpTunnelProducer *p = setup_transfer_from_transform();
 		      perform_transform_cache_write_action();
 		      tunnel.tunnel_run(p);
 		      break;
 		    }
-		  case HttpTransact::SERVER_READ:
+		  case SERVER_READ:
 		    {
 //		      setup_server_transfer();
 //		      perform_cache_write_action();
 //		      tunnel.tunnel_run();
 		      break;
 		    }
-		  case HttpTransact::SERVE_FROM_CACHE:
+		  case SERVE_FROM_CACHE:
 		    {
 //		      setup_cache_read_transfer();
 //		      tunnel.tunnel_run();
 		      break;
 		    }
 
-		  case HttpTransact::PROXY_INTERNAL_CACHE_WRITE:
+		  case PROXY_INTERNAL_CACHE_WRITE:
 		    {
 //		      if (cache_sm.cache_write_vc) {
 //		        setup_internal_transfer(&HttpStateMachine::tunnel_handler_cache_fill);
 //		      } else {
 //		        setup_internal_transfer(&HttpStateMachine::tunnel_handler);
-//		      }
+//		      	}
 		      break;
 		    }
 
-		  case HttpTransact::PROXY_INTERNAL_CACHE_NOOP:
-		  case HttpTransact::PROXY_INTERNAL_CACHE_DELETE:
-		  case HttpTransact::PROXY_INTERNAL_CACHE_UPDATE_HEADERS:
-		  case HttpTransact::PROXY_SEND_ERROR_CACHE_NOOP:
+		  case PROXY_INTERNAL_CACHE_NOOP:
+		  case PROXY_INTERNAL_CACHE_DELETE:
+		  case PROXY_INTERNAL_CACHE_UPDATE_HEADERS:
+		  case PROXY_SEND_ERROR_CACHE_NOOP:
 		    {
 //		      setup_internal_transfer(&HttpStateMachine::tunnel_handler);
 		      break;
 		    }
 
-		  case HttpTransact::REDIRECT_READ:
+		  case REDIRECT_READ:
 		    {
-		     // call_transact_and_set_next_state(HttpTransact::HandleRequest);
+		     // call_transact_and_set_next_state(HandleRequest);
 		      break;
 		    }
 
@@ -245,7 +250,7 @@ HttpStateMachine::setup_transfer_from_transform(){
 //	// TODO change this call to new_empty_MIOBuffer()
 	MIOBuffer *buf = new_MIOBuffer(alloc_index);
 	buf->water_mark = 0;
-	//buf->water_mark = (int) t_state.txn_conf->default_buffer_water_mark;
+	//buf->water_mark = (int) request->txn_conf->default_buffer_water_mark;
 	IOBufferReader *buf_start = buf->alloc_reader();
 //
 	HttpTunnelConsumer *c = tunnel.get_consumer(transform_info.vc);
@@ -254,8 +259,8 @@ HttpStateMachine::setup_transfer_from_transform(){
 //	ink_assert(c->vc_type == HT_TRANSFORM);
 
 	// Now dump the header into the buffer
-//	ink_assert(t_state.hdr_info.client_response.status_get() != HTTP_STATUS_NOT_MODIFIED);
-	client_response_hdr_bytes = write_response_header_into_buffer(&t_state.hdr_info.client_response, buf);
+//	ink_assert(request->hdr_info.client_response.status_get() != HTTP_STATUS_NOT_MODIFIED);
+	client_response_hdr_bytes = write_response_header_into_buffer(&request->hdr_info.client_response, buf);
 //
 	HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::tunnel_handler);
 //
@@ -274,9 +279,9 @@ HttpStateMachine::setup_transfer_from_transform(){
 
 	this->setup_plugin_agents(p);
 //
-//	if ( t_state.client_info.receive_chunked_response ) {
+//	if ( request->client_info.receive_chunked_response ) {
 //	  tunnel.set_producer_chunking_action(p, client_response_hdr_bytes, TCA_CHUNK_CONTENT);
-//	  tunnel.set_producer_chunking_size(p, t_state.txn_conf->http_chunking_size);
+//	  tunnel.set_producer_chunking_size(p, request->txn_conf->http_chunking_size);
 //	}
 
 	return p;
@@ -289,26 +294,26 @@ HttpStateMachine::setup_blind_tunnel_port()
 {
   // We gotten a connect on a port for blind tunneling so
   //  call transact figure out where it is going
-  call_transact_and_set_next_state(HttpTransact::HandleBlindTunnel);
+  call_transact_and_set_next_state(HandleBlindTunnel);
 }
 
 void
 HttpStateMachine::call_transact_and_set_next_state(TransactEntryFunc_t f)
 {
-//  last_action = t_state.next_action;    // remember where we were
+//  last_action = request->next_action;    // remember where we were
 //
 //  // The callee can either specify a method to call in to Transact,
 //  //   or call with NULL which indicates that Transact should use
 //  //   its stored entry point.
 //  if (f == NULL) {
-//    ink_release_assert(t_state.transact_return_point != NULL);
-//    t_state.transact_return_point(&t_state);
+//    ink_release_assert(request->transact_return_point != NULL);
+//    request->transact_return_point(&t_state);
 //  } else {
 //    f(&t_state);
 //  }
 //
 //  DebugSM("http", "[%" PRId64 "] State Transition: %s -> %s",
-//        sm_id, HttpDebugNames::get_action_name(last_action), HttpDebugNames::get_action_name(t_state.next_action));
+//        sm_id, HttpDebugNames::get_action_name(last_action), HttpDebugNames::get_action_name(request->next_action));
 
   set_next_state();
 
@@ -323,70 +328,61 @@ HttpStateMachine::set_next_state()
   ///////////////////////////////////////////////////////////////////////
   // Use the returned "next action" code to set the next state handler //
   ///////////////////////////////////////////////////////////////////////
-  switch (t_state.next_action) {
-  case HttpTransact::HTTP_API_READ_REQUEST_HDR:
-  case HttpTransact::HTTP_API_PRE_REMAP:
-  case HttpTransact::HTTP_API_POST_REMAP:
-  case HttpTransact::HTTP_API_OS_DNS:
-  case HttpTransact::HTTP_API_SEND_REQUEST_HDR:
-  case HttpTransact::HTTP_API_READ_CACHE_HDR:
-  case HttpTransact::HTTP_API_READ_RESPONSE_HDR:
-  case HttpTransact::HTTP_API_SEND_RESPONSE_HDR:
-  case HttpTransact::HTTP_API_CACHE_LOOKUP_COMPLETE:
-    {
-      t_state.api_next_action = t_state.next_action;
-      do_api_callout();
-      break;
-    }
+  switch (request->next_step) {
+  case HTTP_API_READ_REQUEST_HDR:
+  case HTTP_API_PRE_REMAP:
+  case HTTP_API_POST_REMAP:
+  case HTTP_API_OS_DNS:
+  case HTTP_API_SEND_REQUEST_HDR:
+  case HTTP_API_READ_CACHE_HDR:
+  case HTTP_API_READ_RESPONSE_HDR:
+  case HTTP_API_SEND_RESPONSE_HDR:
+  case HTTP_API_CACHE_LOOKUP_COMPLETE:
+	{
+		//request.api_next_action = request.next_action;
+		do_api_callout();
+		break;
+	}
 
-  case HttpTransact::HTTP_POST_REMAP_SKIP:
+  case HTTP_POST_REMAP_SKIP:
     {
       call_transact_and_set_next_state(NULL);
       break;
     }
 
-  case HttpTransact::HTTP_REMAP_REQUEST:
+  case HTTP_REMAP_REQUEST:
     {
-    	do_remap_request(false);
-//      if (!remapProcessor.using_separate_thread()) {
-//        do_remap_request(true); /* run inline */
-//        DebugSM("url_rewrite", "completed inline remapping request for [%" PRId64 "]", sm_id);
-//        t_state.url_remap_success = remapProcessor.finish_remap(&t_state);
-        call_transact_and_set_next_state(NULL);
-      } else {
-//        HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_remap_request);
-        do_remap_request(false);        /* dont run inline (iow on another thread) */
-      	  }
+    	do_rewrite_request(false);
       break;
     }
 
-  case HttpTransact::DNS_LOOKUP:
+  case DNS_LOOKUP:
     {
       sockaddr const* addr;
 
-      if (t_state.api_server_addr_set) {
+      if (request->server_addr_set) {
         /* If the API has set the server address before the OS DNS lookup
          * then we can skip the lookup
-         */
+          */
         ip_text_buffer ipb;
-        //DebugSM("dns", "[HttpTransact::HandleRequest] Skipping DNS lookup for API supplied target %s.\n", ats_ip_ntop(&t_state.server_info.addr, ipb, sizeof(ipb)));
+        //DebugSM("dns", "[HandleRequest] Skipping DNS lookup for API supplied target %s.\n", ats_ip_ntop(&request->server_info.addr, ipb, sizeof(ipb)));
         // this seems wasteful as we will just copy it right back
-        ats_ip_copy(t_state.host_db_info.ip(), &t_state.server_info.addr);
-        t_state.dns_info.lookup_success = true;
+        //ats_ip_copy(request->host_db_info.ip(), &request->server_info.addr);
+        //request->dns_info.lookup_success = true;
         call_transact_and_set_next_state(NULL);
         break;
-      } else if (url_remap_mode == 2 && t_state.first_dns_lookup) {
-        DebugSM("cdn", "Skipping DNS Lookup");
+      } else if (url_remap_mode == 2 && request->first_dns_lookup) {
+       // DebugSM("cdn", "Skipping DNS Lookup");
         // skip the DNS lookup
-        t_state.first_dns_lookup = false;
-        call_transact_and_set_next_state(HttpTransact::HandleFiltering);
+    	  request->first_dns_lookup = false;
+        call_transact_and_set_next_state(HandleFiltering);
         break;
-      } else  if (t_state.http_config_param->use_client_target_addr
-        && !t_state.url_remap_success
-        && t_state.parent_result.r != PARENT_SPECIFIED
-        && t_state.client_info.is_transparent
-        && t_state.dns_info.os_addr_style == HttpTransact::DNSLookupInfo::OS_ADDR_TRY_DEFAULT
-        && ats_is_ip(addr = t_state.state_machine->ua_session->get_netvc()->get_local_addr())
+      } else  if (request->http_config_param->use_client_target_addr
+        && !request->url_remap_success
+        && request->parent_result.r != PARENT_SPECIFIED
+        && request->client_info.is_transparent
+        && request->dns_info.os_addr_style == DNSLookupInfo::OS_ADDR_TRY_DEFAULT
+        && ats_is_ip(addr = request->state_machine->ua_session->get_netvc()->get_local_addr())
       ) {
         /* If the connection is client side transparent and the URL
          * was not remapped/directed to parent proxy, we can use the
@@ -396,67 +392,68 @@ HttpStateMachine::set_next_state()
          */
         if (is_debug_tag_set("dns")) {
           ip_text_buffer ipb;
-          DebugSM("dns", "[HttpTransact::HandleRequest] Skipping DNS lookup for client supplied target %s.\n", ats_ip_ntop(addr, ipb, sizeof(ipb)));
-        }
-        ats_ip_copy(t_state.host_db_info.ip(), addr);
+          //DebugSM("dns", "[HandleRequest] Skipping DNS lookup for client supplied target %s.\n", ats_ip_ntop(addr, ipb, sizeof(ipb)));
+        	}
+        //ats_ip_copy(request->host_db_info.ip(), addr);
         /* Since we won't know the server HTTP version (no hostdb lookup), we assume it matches the
          * client request version. Seems to be the most correct thing to do in the transparent use-case.
          */
-        if (t_state.hdr_info.client_request.version_get() == HTTPVersion(0, 9))
-          t_state.host_db_info.app.http_data.http_version =  HostDBApplicationInfo::HTTP_VERSION_09;
-        else if (t_state.hdr_info.client_request.version_get() == HTTPVersion(1, 0))
-          t_state.host_db_info.app.http_data.http_version =  HostDBApplicationInfo::HTTP_VERSION_10;
-        else
-          t_state.host_db_info.app.http_data.http_version =  HostDBApplicationInfo::HTTP_VERSION_11;
+        if (request->hdr_info.client_request.version_get() == HTTPVersion(0, 9)){
+        	//request->host_db_info.app.http_data.http_version =  HostDBApplicationInfo::HTTP_VERSION_09;
+        }else if (request->hdr_info.client_request.version_get() == HTTPVersion(1, 0)){
+        	//request->host_db_info.app.http_data.http_version =  HostDBApplicationInfo::HTTP_VERSION_10;
+        }else{
+        	//request->host_db_info.app.http_data.http_version =  HostDBApplicationInfo::HTTP_VERSION_11;
+           }
 
-        t_state.dns_info.lookup_success = true;
+        request->dns_info.lookup_success = true;
         // cache this result so we don't have to unreliably duplicate the
         // logic later if the connect fails.
-        t_state.dns_info.os_addr_style = HttpTransact::DNSLookupInfo::OS_ADDR_TRY_CLIENT;
+        request->dns_info.os_addr_style = DNSLookupInfo::OS_ADDR_TRY_CLIENT;
         call_transact_and_set_next_state(NULL);
         break;
-      } else if (t_state.parent_result.r == PARENT_UNDEFINED && t_state.dns_info.lookup_success) {
+      } else if (request->parent_result.r == PARENT_UNDEFINED && request->dns_info.lookup_success) {
         // Already set, and we don't have a parent proxy to lookup
-        ink_assert(ats_is_ip(t_state.host_db_info.ip()));
-        DebugSM("dns", "[HttpTransact::HandleRequest] Skipping DNS lookup, provided by plugin");
+//        ink_assert(ats_is_ip(request->host_db_info.ip()));
+//        DebugSM("dns", "[HandleRequest] Skipping DNS lookup, provided by plugin");
         call_transact_and_set_next_state(NULL);
         break;
-      } else if (t_state.dns_info.looking_up == HttpTransact::ORIGIN_SERVER &&
-                 t_state.http_config_param->no_dns_forward_to_parent){
+      } else if (request->dns_info.looking_up == ORIGIN_SERVER &&
+    		  request->http_config_param->no_dns_forward_to_parent){
 
-        if (t_state.cop_test_page)
-          ats_ip_copy(t_state.host_db_info.ip(), t_state.state_machine->ua_session->get_netvc()->get_local_addr());
+        if (request->cop_test_page)
+          ats_ip_copy(request->host_db_info.ip(), request->state_machine->ua_session->get_netvc()->get_local_addr());
 
-        t_state.dns_info.lookup_success = true;
+        request->dns_info.lookup_success = true;
         call_transact_and_set_next_state(NULL);
         break;
       }
 
       HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_hostdb_lookup);
 
-      ink_assert(t_state.dns_info.looking_up != HttpTransact::UNDEFINED_LOOKUP);
+      ink_assert(request->dns_info.looking_up != UNDEFINED_LOOKUP);
       do_hostdb_lookup();
       break;
     }
 
-  case HttpTransact::REVERSE_DNS_LOOKUP:
+  case REVERSE_DNS_LOOKUP:
     {
       HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_hostdb_reverse_lookup);
       do_hostdb_reverse_lookup();
       break;
     }
 
-  case HttpTransact::CACHE_LOOKUP:
+  case CACHE_LOOKUP:
     {
       HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_cache_open_read);
       do_cache_lookup_and_read();
       break;
     }
 
-  case HttpTransact::ORIGIN_SERVER_OPEN:
+  case ORIGIN_SERVER_OPEN:
     {
-      if (congestionControlEnabled && (t_state.congest_saved_next_action == HttpTransact::STATE_MACHINE_ACTION_UNDEFINED)) {
-        t_state.congest_saved_next_action = HttpTransact::ORIGIN_SERVER_OPEN;
+      if (congestionControlEnabled && (request->congest_saved_next_action == STATE_MACHINE_ACTION_UNDEFINED)) {
+        request->congest_saved_next_action = ORIGIN_SERVER_OPEN;
         HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_congestion_control_lookup);
         if (!do_congestion_control_lookup())
           break;
@@ -480,7 +477,7 @@ HttpStateMachine::set_next_state()
         // light of this dependency, TS must ensure that the client finishes
         // sending its request and for this reason, the inactivity timeout
         // cannot be cancelled.
-        if (ua_session && !t_state.hdr_info.request_content_length) {
+        if (ua_session && !request->hdr_info.request_content_length) {
           ua_session->get_netvc()->cancel_inactivity_timeout();
         }
       }
@@ -489,31 +486,31 @@ HttpStateMachine::set_next_state()
       break;
     }
 
-  case HttpTransact::SERVER_PARSE_NEXT_HDR:
+  case SERVER_PARSE_NEXT_HDR:
     {
       setup_server_read_response_header();
       break;
     }
 
-  case HttpTransact::PROXY_INTERNAL_100_RESPONSE:
+  case PROXY_INTERNAL_100_RESPONSE:
     {
       setup_100_continue_transfer();
       break;
     }
 
-  case HttpTransact::SERVER_READ:
+  case SERVER_READ:
     {
-      t_state.source = HttpTransact::SOURCE_HTTP_ORIGIN_SERVER;
+      request->source = SOURCE_HTTP_ORIGIN_SERVER;
 
       if (transform_info.vc) {
-        ink_assert(t_state.hdr_info.client_response.valid() == 0);
-        ink_assert((t_state.hdr_info.transform_response.valid()? true : false) == true);
+        ink_assert(request->hdr_info.client_response.valid() == 0);
+        ink_assert((request->hdr_info.transform_response.valid()? true : false) == true);
         HttpTunnelProducer *p = setup_server_transfer_to_transform();
         perform_cache_write_action();
         tunnel.tunnel_run(p);
       } else {
-        ink_assert((t_state.hdr_info.client_response.valid()? true : false) == true);
-        t_state.api_next_action = HttpTransact::HTTP_API_SEND_RESPONSE_HDR;
+        ink_assert((request->hdr_info.client_response.valid()? true : false) == true);
+        request->api_next_action = HTTP_API_SEND_RESPONSE_HDR;
 
         if (hooks_set) {
           do_api_callout_internal();
@@ -526,30 +523,30 @@ HttpStateMachine::set_next_state()
       break;
     }
 
-  case HttpTransact::SERVE_FROM_CACHE:
+  case SERVE_FROM_CACHE:
     {
-      ink_assert(t_state.cache_info.action == HttpTransact::CACHE_DO_SERVE ||
-                 t_state.cache_info.action == HttpTransact::CACHE_DO_SERVE_AND_DELETE ||
-                 t_state.cache_info.action == HttpTransact::CACHE_DO_SERVE_AND_UPDATE);
+      ink_assert(request->cache_info.action == CACHE_DO_SERVE ||
+                 request->cache_info.action == CACHE_DO_SERVE_AND_DELETE ||
+                 request->cache_info.action == CACHE_DO_SERVE_AND_UPDATE);
       release_server_session(true);
-      t_state.source = HttpTransact::SOURCE_CACHE;
+      request->source = SOURCE_CACHE;
 
       if (transform_info.vc) {
-        ink_assert(t_state.hdr_info.client_response.valid() == 0);
-        ink_assert((t_state.hdr_info.transform_response.valid()? true : false) == true);
-        t_state.hdr_info.cache_response.create(HTTP_TYPE_RESPONSE);
-        t_state.hdr_info.cache_response.copy(&t_state.hdr_info.transform_response);
+        ink_assert(request->hdr_info.client_response.valid() == 0);
+        ink_assert((request->hdr_info.transform_response.valid()? true : false) == true);
+        request->hdr_info.cache_response.create(HTTP_TYPE_RESPONSE);
+        request->hdr_info.cache_response.copy(&request->hdr_info.transform_response);
 
         HttpTunnelProducer *p = setup_cache_transfer_to_transform();
         perform_cache_write_action();
         tunnel.tunnel_run(p);
       } else {
-        ink_assert((t_state.hdr_info.client_response.valid()? true : false) == true);
-        t_state.hdr_info.cache_response.create(HTTP_TYPE_RESPONSE);
-        t_state.hdr_info.cache_response.copy(&t_state.hdr_info.client_response);
+        ink_assert((request->hdr_info.client_response.valid()? true : false) == true);
+        request->hdr_info.cache_response.create(HTTP_TYPE_RESPONSE);
+        request->hdr_info.cache_response.copy(&request->hdr_info.client_response);
 
         perform_cache_write_action();
-        t_state.api_next_action = HttpTransact::HTTP_API_SEND_RESPONSE_HDR;
+        request->api_next_action = HTTP_API_SEND_RESPONSE_HDR;
         if (hooks_set) {
           do_api_callout_internal();
         } else {
@@ -560,7 +557,7 @@ HttpStateMachine::set_next_state()
       break;
     }
 
-  case HttpTransact::CACHE_ISSUE_WRITE:
+  case CACHE_ISSUE_WRITE:
     {
       ink_assert(cache_sm.cache_write_vc == NULL);
       HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_cache_open_write);
@@ -570,14 +567,14 @@ HttpStateMachine::set_next_state()
 
     }
 
-  case HttpTransact::PROXY_INTERNAL_CACHE_WRITE:
+  case PROXY_INTERNAL_CACHE_WRITE:
     {
-      t_state.api_next_action = HttpTransact::HTTP_API_SEND_RESPONSE_HDR;
+      request->api_next_action = HTTP_API_SEND_RESPONSE_HDR;
       do_api_callout();
       break;
     }
 
-  case HttpTransact::PROXY_INTERNAL_CACHE_NOOP:
+  case PROXY_INTERNAL_CACHE_NOOP:
     {
       if (server_entry == NULL || server_entry->in_tunnel == false) {
         release_server_session();
@@ -585,16 +582,16 @@ HttpStateMachine::set_next_state()
       // If we're in state SEND_API_RESPONSE_HDR, it means functions
       // registered to hook SEND_RESPONSE_HDR have already been called. So we do not
       // need to call do_api_callout. Otherwise TS loops infinitely in this state !
-      if (t_state.api_next_action == HttpTransact::HTTP_API_SEND_RESPONSE_HDR) {
+      if (request->api_next_action == HTTP_API_SEND_RESPONSE_HDR) {
         handle_api_return();
       } else {
-        t_state.api_next_action = HttpTransact::HTTP_API_SEND_RESPONSE_HDR;
+        request->api_next_action = HTTP_API_SEND_RESPONSE_HDR;
         do_api_callout();
       }
       break;
     }
 
-  case HttpTransact::PROXY_INTERNAL_CACHE_DELETE:
+  case PROXY_INTERNAL_CACHE_DELETE:
     {
       // Nuke all the alternates since this is mostly likely
       //   the result of a delete method
@@ -602,34 +599,34 @@ HttpStateMachine::set_next_state()
       do_cache_delete_all_alts(NULL);
 
       release_server_session();
-      t_state.api_next_action = HttpTransact::HTTP_API_SEND_RESPONSE_HDR;
+      request->api_next_action = HTTP_API_SEND_RESPONSE_HDR;
       do_api_callout();
       break;
     }
 
-  case HttpTransact::PROXY_INTERNAL_CACHE_UPDATE_HEADERS:
+  case PROXY_INTERNAL_CACHE_UPDATE_HEADERS:
     {
       issue_cache_update();
       cache_sm.close_read();
 
       release_server_session();
-      t_state.api_next_action = HttpTransact::HTTP_API_SEND_RESPONSE_HDR;
+      request->api_next_action = HTTP_API_SEND_RESPONSE_HDR;
       do_api_callout();
       break;
 
     }
 
-  case HttpTransact::PROXY_SEND_ERROR_CACHE_NOOP:
+  case PROXY_SEND_ERROR_CACHE_NOOP:
     {
       setup_error_transfer();
       break;
     }
 
 
-  case HttpTransact::PROXY_INTERNAL_REQUEST:
+  case PROXY_INTERNAL_REQUEST:
     {
       HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_handle_stat_page);
-      Action *action_handle = statPagesManager.handle_http(this, &t_state.hdr_info.client_request);
+      Action *action_handle = statPagesManager.handle_http(this, &request->hdr_info.client_request);
 
       if (action_handle != ACTION_RESULT_DONE) {
         pending_action = action_handle;
@@ -639,11 +636,11 @@ HttpStateMachine::set_next_state()
       break;
     }
 
-  case HttpTransact::OS_RR_MARK_DOWN:
+  case OS_RR_MARK_DOWN:
     {
       HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_mark_os_down);
 
-      ink_assert(t_state.dns_info.looking_up == HttpTransact::ORIGIN_SERVER);
+      ink_assert(request->dns_info.looking_up == ORIGIN_SERVER);
 
       // TODO: This might not be optimal (or perhaps even correct), but it will
       // effectively mark the host as down. What's odd is that state_mark_os_down
@@ -654,15 +651,15 @@ HttpStateMachine::set_next_state()
       break;
     }
 
-  case HttpTransact::SSL_TUNNEL:
+  case SSL_TUNNEL:
     {
       setup_blind_tunnel(true);
       break;
     }
 
-  case HttpTransact::ORIGIN_SERVER_RAW_OPEN:{
-      if (congestionControlEnabled && (t_state.congest_saved_next_action == HttpTransact::STATE_MACHINE_ACTION_UNDEFINED)) {
-        t_state.congest_saved_next_action = HttpTransact::ORIGIN_SERVER_RAW_OPEN;
+  case ORIGIN_SERVER_RAW_OPEN:{
+      if (congestionControlEnabled && (request->congest_saved_next_action == STATE_MACHINE_ACTION_UNDEFINED)) {
+        request->congest_saved_next_action = ORIGIN_SERVER_RAW_OPEN;
         HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_congestion_control_lookup);
         if (!do_congestion_control_lookup())
           break;
@@ -675,23 +672,23 @@ HttpStateMachine::set_next_state()
       break;
     }
 
-  case HttpTransact::ICP_QUERY:
+  case ICP_QUERY:
     {
       HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_icp_lookup);
       do_icp_lookup();
       break;
     }
 
-  case HttpTransact::CACHE_ISSUE_WRITE_TRANSFORM:
+  case CACHE_ISSUE_WRITE_TRANSFORM:
     {
-      ink_assert(t_state.cache_info.transform_action == HttpTransact::CACHE_PREPARE_TO_WRITE);
+      ink_assert(request->cache_info.transform_action == CACHE_PREPARE_TO_WRITE);
 
       if (transform_cache_sm.cache_write_vc) {
         // We've already got the write_vc that
         //  didn't use for the untransformed copy
         ink_assert(cache_sm.cache_write_vc == NULL);
-        ink_assert(t_state.api_info.cache_untransformed == false);
-        t_state.cache_info.write_lock_state = HttpTransact::CACHE_WL_SUCCESS;
+        ink_assert(request->api_info.cache_untransformed == false);
+        request->cache_info.write_lock_state = CACHE_WL_SUCCESS;
         call_transact_and_set_next_state(NULL);
       } else {
         HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_cache_open_write);
@@ -701,36 +698,36 @@ HttpStateMachine::set_next_state()
       break;
     }
 
-  case HttpTransact::TRANSFORM_READ:
+  case TRANSFORM_READ:
     {
-      t_state.api_next_action = HttpTransact::HTTP_API_SEND_RESPONSE_HDR;
+      request->api_next_action = HTTP_API_SEND_RESPONSE_HDR;
       do_api_callout();
       break;
     }
 
-  case HttpTransact::READ_PUSH_HDR:
+  case READ_PUSH_HDR:
     {
       setup_push_read_response_header();
       break;
     }
 
-  case HttpTransact::STORE_PUSH_BODY:
+  case STORE_PUSH_BODY:
     {
       setup_push_transfer_to_cache();
       tunnel.tunnel_run();
       break;
     }
 
-  case HttpTransact::PREPARE_CACHE_UPDATE:
+  case PREPARE_CACHE_UPDATE:
     {
-      ink_assert(t_state.api_update_cached_object == HttpTransact::UPDATE_CACHED_OBJECT_CONTINUE);
+      ink_assert(request->api_update_cached_object == UPDATE_CACHED_OBJECT_CONTINUE);
       do_cache_prepare_update();
       break;
     }
-  case HttpTransact::ISSUE_CACHE_UPDATE:
+  case ISSUE_CACHE_UPDATE:
     {
-      if (t_state.api_update_cached_object == HttpTransact::UPDATE_CACHED_OBJECT_ERROR) {
-        t_state.cache_info.object_read = NULL;
+      if (request->api_update_cached_object == UPDATE_CACHED_OBJECT_ERROR) {
+        request->cache_info.object_read = NULL;
         cache_sm.close_read();
       }
       issue_cache_update();
@@ -739,15 +736,15 @@ HttpStateMachine::set_next_state()
     }
 
 #ifdef PROXY_DRAIN
-  case HttpTransact::PROXY_DRAIN_REQUEST_BODY:
+  case PROXY_DRAIN_REQUEST_BODY:
     {
       do_drain_request_body();
       break;
     }
 #endif /* PROXY_DRAIN */
 
-  case HttpTransact::SEND_QUERY_TO_INCOMING_ROUTER:
-  case HttpTransact::CONTINUE:
+  case SEND_QUERY_TO_INCOMING_ROUTER:
+  case CONTINUE:
     {
       //ink_release_assert(!"Not implemented");
     }
@@ -782,7 +779,7 @@ HttpStateMachine::main_handler(int event, void *data)
     // Only search the VC table if the event could have to
     //  do with a VIO to save a few cycles
 
-    if (event < VC_EVENT_EVENTS_START + 100) {
+    if (event < CON_EVENT_EVENTS_START + 100) {
       vc_entry = vc_table.find_entry((VIO *) data);
     }
   }
@@ -813,7 +810,7 @@ HttpStateMachine::main_handler(int event, void *data)
     ink_assert(reentrancy_count >= 0);
   }
 
-  return (VC_EVENT_CONT);
+  return (CON_EVENT_CONT);
 
 }
 
@@ -821,26 +818,26 @@ void
 HttpStateMachine::perform_transform_cache_write_action()
 {
 //  DebugSM("http", "[%" PRId64 "] perform_transform_cache_write_action %s", sm_id,
-//        HttpDebugNames::get_cache_action_name(t_state.cache_info.action));
+//        HttpDebugNames::get_cache_action_name(request->cache_info.action));
 
-//  if (t_state.range_setup)
+//  if (request->range_setup)
 //    return;
 //
-//  switch (t_state.cache_info.transform_action) {
-//  case HttpTransact::CACHE_DO_NO_ACTION:
+//  switch (request->cache_info.transform_action) {
+//  case CACHE_DO_NO_ACTION:
 //    {
 //      // Nothing to do
 //      transform_cache_sm.end_both();
 //      break;
 //    }
 //
-//  case HttpTransact::CACHE_DO_WRITE:
+//  case CACHE_DO_WRITE:
 //    {
 //      transform_cache_sm.close_read();
-//      t_state.cache_info.transform_write_status = HttpTransact::CACHE_WRITE_IN_PROGRESS;
+//      request->cache_info.transform_write_status = CACHE_WRITE_IN_PROGRESS;
 //      setup_cache_write_transfer(&transform_cache_sm,
 //                                 transform_info.entry->vc,
-//                                 &t_state.cache_info.transform_store, client_response_hdr_bytes, "cache write t");
+//                                 &request->cache_info.transform_store, client_response_hdr_bytes, "cache write t");
 //      break;
 //    }
 //
@@ -851,3 +848,9 @@ HttpStateMachine::perform_transform_cache_write_action()
 
 }
 
+
+int32_t
+HttpStateMachine::do_rewrite_request(bool )
+{
+	return 0;
+}

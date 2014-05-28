@@ -58,12 +58,12 @@
 #include <strings.h>
 #include <sys/types.h>
 #include "libts.h"
-#include "HTTP.h"
+#include "Http.h"
 #include "HttpConfig.h"
 #include "HttpCompat.h"
 #include "HttpTransact.h"
-#include "Error.h"
-#include "Main.h"
+//#include "Error.h"
+//#include "Main.h"
 #include "RawHashTable.h"
 
 

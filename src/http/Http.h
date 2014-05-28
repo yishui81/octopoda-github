@@ -52,11 +52,54 @@
 #include "HttpTunnelProducer.h"
 #include "HttpTunnelConsumer.h"
 #include "HttpVariable.h"
+#include "HttpConnectionAttributes.h"
+#include "HttpTransact.h"
 
 
 #include "ink_apidefs.h"
 
+#define MAX_PRODUCERS   2
+#define MAX_CONSUMERS   4
 
+
+#define CON_EVENT_EVENTS_START                     100
+#define NET_EVENT_EVENTS_START                    200
+#define DISK_EVENT_EVENTS_START                   300
+#define CLUSTER_EVENT_EVENTS_START                400
+#define HOSTDB_EVENT_EVENTS_START                 500
+#define DNS_EVENT_EVENTS_START                    600
+#define CONFIG_EVENT_EVENTS_START                 800
+#define LOG_EVENT_EVENTS_START	                  900
+#define MULTI_CACHE_EVENT_EVENTS_START            1000
+#define CACHE_EVENT_EVENTS_START                  1100
+#define CACHE_DIRECTORY_EVENT_EVENTS_START        1200
+#define CACHE_DB_EVENT_EVENTS_START               1300
+#define HTTP_NET_CONNECTION_EVENT_EVENTS_START    1400
+#define HTTP_NET_VCONNECTION_EVENT_EVENTS_START   1500
+#define GC_EVENT_EVENTS_START                     1600
+#define ICP_EVENT_EVENTS_START                    1800
+#define TRANSFORM_EVENTS_START                    2000
+#define STAT_PAGES_EVENTS_START                   2100
+#define HTTP_SESSION_EVENTS_START                 2200
+#define HTTP_TUNNEL_EVENTS_START                  2300
+#define HTTP_SCH_UPDATE_EVENTS_START              2400
+#define NT_ASYNC_CONNECT_EVENT_EVENTS_START       3000
+#define NT_ASYNC_IO_EVENT_EVENTS_START            3100
+#define RAFT_EVENT_EVENTS_START                   3200
+#define SIMPLE_EVENT_EVENTS_START                 3300
+#define UPDATE_EVENT_EVENTS_START                 3500
+#define LOG_COLLATION_EVENT_EVENTS_START          3800
+#define AIO_EVENT_EVENTS_START                    3900
+#define BLOCK_CACHE_EVENT_EVENTS_START            4000
+#define UTILS_EVENT_EVENTS_START                  5000
+#define CONGESTION_EVENT_EVENTS_START             5100
+#define INK_API_EVENT_EVENTS_START                60000
+#define SRV_EVENT_EVENTS_START	                 62000
+#define REMAP_EVENT_EVENTS_START                  63000
+
+#define HTTP_TUNNEL_EVENT_DONE             (HTTP_TUNNEL_EVENTS_START + 1)
+#define HTTP_TUNNEL_EVENT_PRECOMPLETE      (HTTP_TUNNEL_EVENTS_START + 2)
+#define HTTP_TUNNEL_EVENT_CONSUMER_DETACH  (HTTP_TUNNEL_EVENTS_START + 3)
 
 
 enum HTTPStatus
@@ -251,6 +294,14 @@ enum SquidHitMissCode
   SQUID_HIT_MISS_INVALID_ASSIGNED_CODE = 'z'
 };
 
+/// Type of transport on the connection.
+enum TransportType {
+  TRANSPORT_DEFAULT = 0, ///< Default (normal HTTP).
+  TRANSPORT_COMPRESSED, ///< Compressed HTTP.
+  TRANSPORT_BLIND_TUNNEL, ///< Blind tunnel (no processing).
+  TRANSPORT_SSL, ///< SSL connection.
+  TRANSPORT_PLUGIN /// < Protocol plugin connection
+};
 
 enum HTTPType
 {

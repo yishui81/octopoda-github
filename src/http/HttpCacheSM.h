@@ -37,7 +37,7 @@
 //#include "StatSystem.h"
 //#include "ProxyConfig.h"
 #include "URL.h"
-#include "HTTP.h"
+#include "Http.h"
 #include "HttpConfig.h"
 
 class HttpStateMachine;
@@ -60,17 +60,17 @@ class HttpCacheSM:public UTaskObj, Handle
 public:
   HttpCacheSM();
 
-  void init(HttpStateMachine * sm_arg, ProxyMutex * amutex)
+  void init(HttpStateMachine * sm_arg)
   {
     master_sm = sm_arg;
    // mutex = amutex;
    // captive_action.init(this);
   }
 
-  void open_read(URL * url, HTTPHdr * hdr, CacheLookupHttpConfig * params, time_t pin_in_cache);
+  void open_read(URL * url, HttpHeader * hdr, CacheLookupHttpConfig * params, time_t pin_in_cache);
 
   void open_write(URL * url,
-                     HTTPHdr * request, CacheHTTPInfo * old_info, time_t pin_in_cache, bool retry, bool allow_multiple);
+                     HttpHeader * request, CacheHTTPInfo * old_info, time_t pin_in_cache, bool retry, bool allow_multiple);
 
   CacheVConnection *cache_read_vc;
   CacheVConnection *cache_write_vc;
@@ -98,7 +98,7 @@ public:
   inline void abort_read()
   {
     if (cache_read_vc) {
-      HTTP_DECREMENT_DYN_STAT(http_current_cache_connections_stat);
+      //HTTP_DECREMENT_DYN_STAT(http_current_cache_connections_stat);
       cache_read_vc->do_io(VIO::ABORT);
       cache_read_vc = NULL;
     }
@@ -106,7 +106,7 @@ public:
   inline void abort_write()
   {
     if (cache_write_vc) {
-      HTTP_DECREMENT_DYN_STAT(http_current_cache_connections_stat);
+      //HTTP_DECREMENT_DYN_STAT(http_current_cache_connections_stat);
       cache_write_vc->do_io(VIO::ABORT);
       cache_write_vc = NULL;
     }
@@ -157,7 +157,7 @@ private:
 
   // Open read parameters
   int open_read_tries;
-  HTTPHdr *read_request_hdr;
+  HttpHeader *read_request_hdr;
   CacheLookupHttpConfig *read_config;
   time_t read_pin_in_cache;
 

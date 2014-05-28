@@ -69,5 +69,5 @@ public:
   //  destroys and ref count pointers defeat this
   RefCountObj *m_ext_buffer;
 };
-
+extern ClassAllocator<HttpCacheAlt> HttpCacheAltAllocator("HttpCacheAltAllocator");
 #endif /* HTTPCACHEALT_H_ */

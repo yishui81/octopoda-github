@@ -12,7 +12,7 @@
 /*
  *
  */
-
+#define MAX_PRODUCERS 5
 class HttpTunnelProducer
 {
 public:

@@ -1,423 +1,256 @@
 /*
  * HttpRequest.h
  *
- *  Created on: 2014年5月5日
+ *  Created on: 2014年5月28日
  *      Author: jacky
  */
 
 #ifndef HTTPREQUEST_H_
 #define HTTPREQUEST_H_
-#include <oc_core.h>
-#include "Request.h"
-#include "Connector.h"
-#include "oc_string.h"
-#include "IOStream.h"
-#include <map>
-/*
- *
- */
+#include "Http.h"
 
-#define OC_HTTP_MAX_URI_CHANGES           10
-#define OC_HTTP_MAX_SUBREQUESTS           200
+class HostDBInfo;
 
-/* must be 2^n */
-#define OC_HTTP_LC_HEADER_LEN             32
+enum StateMachineAction_t
+{
+	STATE_MACHINE_ACTION_UNDEFINED = 0,
 
+	DNS_LOOKUP,
+	REVERSE_DNS_LOOKUP,
+	//AUTH_LOOKUP,
 
-#define OC_HTTP_DISCARD_BUFFER_SIZE       4096
-#define OC_HTTP_LINGERING_BUFFER_SIZE     4096
+	CACHE_LOOKUP,
+	CACHE_ISSUE_WRITE,
+	CACHE_ISSUE_WRITE_TRANSFORM,
+	ISSUE_CACHE_DELETE,
+	PREPARE_CACHE_UPDATE,
+	ISSUE_CACHE_UPDATE,
 
+	ICP_QUERY,
 
-#define OC_HTTP_VERSION_9                 9
-#define OC_HTTP_VERSION_10                1000
-#define OC_HTTP_VERSION_11                1001
+	ORIGIN_SERVER_OPEN,
+	ORIGIN_SERVER_RAW_OPEN,
+	OS_RR_MARK_DOWN,
 
-#define OC_HTTP_UNKNOWN                   0x0001
-#define OC_HTTP_GET                       0x0002
-#define OC_HTTP_HEAD                      0x0004
-#define OC_HTTP_POST                      0x0008
-#define OC_HTTP_PUT                       0x0010
-#define OC_HTTP_DELETE                    0x0020
-#define OC_HTTP_MKCOL                     0x0040
-#define OC_HTTP_COPY                      0x0080
-#define OC_HTTP_MOVE                      0x0100
-#define OC_HTTP_OPTIONS                   0x0200
-#define OC_HTTP_PROPFIND                  0x0400
-#define OC_HTTP_PROPPATCH                 0x0800
-#define OC_HTTP_LOCK                      0x1000
-#define OC_HTTP_UNLOCK                    0x2000
-#define OC_HTTP_PATCH                     0x4000
-#define OC_HTTP_TRACE                     0x8000
+	READ_PUSH_HDR,
+	STORE_PUSH_BODY,
 
-#define OC_HTTP_CONNECTION_CLOSE          1
-#define OC_HTTP_CONNECTION_KEEP_ALIVE     2
+	PROXY_INTERNAL_CACHE_DELETE,
+	PROXY_INTERNAL_CACHE_NOOP,
+	PROXY_INTERNAL_CACHE_UPDATE_HEADERS,
+	PROXY_INTERNAL_CACHE_WRITE,
+	PROXY_INTERNAL_100_RESPONSE,
+	PROXY_INTERNAL_REQUEST,
+	PROXY_SEND_ERROR_CACHE_NOOP,
+#ifdef PROXY_DRAIN
+	PROXY_DRAIN_REQUEST_BODY,
+#endif /* PROXY_DRAIN */
 
+	SEND_QUERY_TO_INCOMING_ROUTER,
+	SERVE_FROM_CACHE,
+	SERVER_READ,
+	SERVER_PARSE_NEXT_HDR,
+	TRANSFORM_READ,
 
-#define OC_NONE                           1
+	SSL_TUNNEL,
+	EXTENSION_METHOD_TUNNEL,
 
+	CONTINUE,
 
-#define OC_HTTP_PARSE_HEADER_DONE         1
+	HTTP_API_SM_START,
 
-#define OC_HTTP_CLIENT_ERROR              10
-#define OC_HTTP_PARSE_INVALID_METHOD      10
-#define OC_HTTP_PARSE_INVALID_REQUEST     11
-#define OC_HTTP_PARSE_INVALID_09_METHOD   12
+	HTTP_API_READ_REQUEST_HDR,
+	HTTP_API_PRE_REMAP,
+	HTTP_REMAP_REQUEST,
+	HTTP_API_POST_REMAP,
+	HTTP_POST_REMAP_SKIP,
 
-#define OC_HTTP_PARSE_INVALID_HEADER      13
-
-
-/* unused                                  1 */
-#define OC_HTTP_SUBREQUEST_IN_MEMORY      2
-#define OC_HTTP_SUBREQUEST_WAITED         4
-#define OC_HTTP_LOG_UNSAFE                8
-
-
-#define OC_HTTP_CONTINUE                  100
-#define OC_HTTP_SWITCHING_PROTOCOLS       101
-#define OC_HTTP_PROCESSING                102
-
-#define OC_HTTP_OK                        200
-#define OC_HTTP_CREATED                   201
-#define OC_HTTP_ACCEPTED                  202
-#define OC_HTTP_NO_CONTENT                204
-#define OC_HTTP_PARTIAL_CONTENT           206
-
-#define OC_HTTP_SPECIAL_RESPONSE          300
-#define OC_HTTP_MOVED_PERMANENTLY         301
-#define OC_HTTP_MOVED_TEMPORARILY         302
-#define OC_HTTP_SEE_OTHER                 303
-#define OC_HTTP_NOT_MODIFIED              304
-#define OC_HTTP_TEMPORARY_REDIRECT        307
-
-#define OC_HTTP_BAD_REQUEST               400
-#define OC_HTTP_UNAUTHORIZED              401
-#define OC_HTTP_FORBIDDEN                 403
-#define OC_HTTP_NOT_FOUND                 404
-#define OC_HTTP_NOT_ALLOWED               405
-#define OC_HTTP_REQUEST_TIME_OUT          408
-#define OC_HTTP_CONFLICT                  409
-#define OC_HTTP_LENGTH_REQUIRED           411
-#define OC_HTTP_PRECONDITION_FAILED       412
-#define OC_HTTP_REQUEST_ENTITY_TOO_LARGE  413
-#define OC_HTTP_REQUEST_URI_TOO_LARGE     414
-#define OC_HTTP_UNSUPPORTED_MEDIA_TYPE    415
-#define OC_HTTP_RANGE_NOT_SATISFIABLE     416
+	HTTP_API_OS_DNS,
+	HTTP_API_SEND_REQUEST_HDR,
+	HTTP_API_READ_CACHE_HDR,
+	HTTP_API_CACHE_LOOKUP_COMPLETE,
+	HTTP_API_READ_RESPONSE_HDR,
+	HTTP_API_SEND_RESPONSE_HDR,
+	REDIRECT_READ,
+	HTTP_API_SM_SHUTDOWN
+};
 
 
-/* Our own HTTP codes */
-
-/* The special code to close connection without any response */
-#define OC_HTTP_CLOSE                     444
-
-#define OC_HTTP_NGINX_CODES               494
-
-#define OC_HTTP_REQUEST_HEADER_TOO_LARGE  494
-
-#define OC_HTTPS_CERT_ERROR               495
-#define OC_HTTPS_NO_CERT                  496
-
-/*
- * We use the special code for the plain HTTP requests that are sent to
- * HTTPS port to distinguish it from 4XX in an error page redirection
- */
-#define OC_HTTP_TO_HTTPS                  497
-
-/* 498 is the canceled code for the requests with invalid host name */
-
-/*
- * HTTP does not define the code for the case when a client closed
- * the connection while we are processing its request so we introduce
- * own code to log such situation when a client has closed the connection
- * before we even try to send the HTTP header to it
- */
-#define OC_HTTP_CLIENT_CLOSED_REQUEST     499
-
-
-#define OC_HTTP_INTERNAL_SERVER_ERROR     500
-#define OC_HTTP_NOT_IMPLEMENTED           501
-#define OC_HTTP_BAD_GATEWAY               502
-#define OC_HTTP_SERVICE_UNAVAILABLE       503
-#define OC_HTTP_GATEWAY_TIME_OUT          504
-#define OC_HTTP_INSUFFICIENT_STORAGE      507
-
-
-#define OC_HTTP_LOWLEVEL_BUFFERED         0xf0
-#define OC_HTTP_WRITE_BUFFERED            0x10
-#define OC_HTTP_GZIP_BUFFERED             0x20
-#define OC_HTTP_SSI_BUFFERED              0x01
-#define OC_HTTP_SUB_BUFFERED              0x02
-#define OC_HTTP_COPY_BUFFERED             0x04
-
-
-typedef enum {
-    OC_HTTP_UNKOWN_PHASE = 0,
-    OC_HTTP_POST_READ_PHASE = 1,      /* 读取请求 */
-    OC_HTTP_SERVER_REWRITE_PHASE,   /* server级别的rewrite */
-
-    OC_HTTP_FIND_CONFIG_PHASE,      /* 根据uri查找location */
-    OC_HTTP_REWRITE_PHASE,          /* localtion级别的rewrite */
-    OC_HTTP_POST_REWRITE_PHASE,     /* server、location级别的rewrite都是在这个phase进行收尾工作的 */
-
-    OC_HTTP_PREACCESS_PHASE,        /* 粗粒度的access */
-
-    OC_HTTP_ACCESS_PHASE,           /* 细粒度的access，比如权限验证、存取控制 */
-    OC_HTTP_POST_ACCESS_PHASE,      /* 根据上述两个phase得到access code进行操作 */
-
-    OC_HTTP_TRY_FILES_PHASE,        /* 实现try_files指令 */
-    OC_HTTP_CONTENT_PHASE,          /* 生成http响应 */
-
-    OC_HTTP_LOG_PHASE               /* log模块 */
-} HTTP_REQUEST_PROCESS_PHASE;
-
-
-using namespace std;
-class HttpRequest : public Request{
+class HttpRequest {
 public:
-	HttpRequest(Connector* connector);
+	HttpRequest(HttpStateMachine* state_machine);
 	virtual ~HttpRequest();
 
 public:
-	int32_t Read();
-	int32_t Write();
-	int32_t handle_request();
+     HttpStateMachine* state_machine;
+     TransportType	  port_attribute;
+     int64_t			  next_step;
 
-    virtual int handle_open  (const URE_Msg& msg);
-    virtual int handle_close (UWorkEnv * orign_uwe, long retcode);
+     Arena arena;
 
-    //timer
-    virtual	int handle_timeout( const TimeValue & origts, long time_id, const void * act );
+     HttpConfigParams *http_config_param;
+//     CacheLookupInfo cache_info;
+     bool force_dns;
+//     DNSLookupInfo dns_info;
+//     RedirectInfo redirect_info;
+     unsigned int updated_server_version;
+     bool is_revalidation_necessary;     //Added to check if revalidation is necessary - YTS Team, yamsat
+     bool request_will_not_selfloop;     // To determine if process done - YTS Team, yamsat
+     HttpConnectionAttributes client_info;
+     HttpConnectionAttributes icp_info;
+     HttpConnectionAttributes parent_info;
+     HttpConnectionAttributes server_info;
+     HttpConnectionAttributes router_info;
 
-   //message
-    virtual int handle_message( const URE_Msg & msg ) ;
-    virtual int handle_failed_message( const URE_Msg & msg ) ;
+     Source_t source;
+     Source_t pre_transform_source;
+     HttpRequestFlavor_t req_flavor;
 
-   //aio
-    virtual int handle_read( URE_AioBlock * aib ) { return 0; }
-    virtual int handle_write( URE_AioBlock * aib ) { return 0; }
-
-private :
-	int32_t  process_http_uri();
-	int32_t  process_http_header();
-	int32_t  process_http_body();
-
-public:
-	int32_t			         m_phase;
-	map<string, string> headers_in;
-	map<string, string> headers_out;
-
-//	 uint32_t                   m_signature;         /* "HTTP" */
-
-//	    ngx_connection_t                 *connection;
-//
-//	    void                            **ctx;
-//	    void                            **main_conf;
-//	    void                            **srv_conf;
-//	    void                            **loc_conf;
-
-//	    ngx_http_event_handler_pt         read_event_handler;
-//	    ngx_http_event_handler_pt         write_event_handler;
-
-//	#if (NGX_HTTP_CACHE)
-//	    ngx_http_cache_t                 *cache;
-//	#endif
-
-//	    ngx_http_upstream_t              *upstream;
-//	    ngx_array_t                      *upstream_states;
-//	                                         /* of ngx_http_upstream_state_t */
-
-//	    ngx_pool_t                       *pool;
-//	    ngx_buf_t                        *header_in;
-//
-//	    ngx_http_headers_in_t             headers_in;
-//	    ngx_http_headers_out_t            headers_out;
-//
-//	    ngx_http_request_body_t          *request_body;
-//
-//	    time_t                            lingering_time;
-//	    time_t                            start_sec;
-//	    //msec_t                        start_msec;
-//
-//	    uint32_t                        method;
-//	    uint32_t                        http_version;
-//
-//	    oc_str_t                         request_line;
-//	    oc_str_t                         uri;
-//	    oc_str_t                         args;
-//	    oc_str_t                         exten;
-//	    oc_str_t                         unparsed_uri;
-//
-//	    oc_str_t                         method_name;
-//	    oc_str_t                         http_protocol;
-//
-////	    ngx_chain_t                      *out;
-//	    ngx_http_request_t               *main;
-//	    ngx_http_request_t               *parent;
-//	    ngx_http_postponed_request_t     *postponed;
-//	    ngx_http_post_subrequest_t       *post_subrequest;
-//	    ngx_http_posted_request_t        *posted_requests;
-//
-//	    int32_t                         phase_handler;
-//	    ngx_http_handler_pt               content_handler;
-//	    uint32_t                        access_code;
-//
-//	    ngx_http_variable_value_t        *variables;
-//
-//	#if (NGX_PCRE)
-//	    ngx_uint_t                        ncaptures;
-//	    int                              *captures;
-//	    u_char                           *captures_data;
-//	#endif
-//
-//	    size_t                            limit_rate;
-//	    size_t                            limit_rate_after;
-//
-//	    /* used to learn the Apache compatible response length without a header */
-//	    size_t                            header_size;
-//
-//	    off_t                             request_length;
-//
-//	    uint32_t                        err_status;
-//
-//	    ngx_http_connection_t            *http_connection;
-//	#if (NGX_HTTP_SPDY)
-//	    ngx_http_spdy_stream_t           *spdy_stream;
-//	#endif
-//
-//	    ngx_http_log_handler_pt           log_handler;
-//
-//	    ngx_http_cleanup_t               *cleanup;
-//
-//	    unsigned                          subrequests:8;
-//	    unsigned                          count:8;
-//	    unsigned                          blocked:8;
-//
-//	    unsigned                          aio:1;
-//
-//	    unsigned                          http_state:4;
-//
-//	    /* URI with "/." and on Win32 with "//" */
-//	    unsigned                          complex_uri:1;
-//
-//	    /* URI with "%" */
-//	    unsigned                          quoted_uri:1;
-//
-//	    /* URI with "+" */
-//	    unsigned                          plus_in_uri:1;
-//
-//	    /* URI with " " */
-//	    unsigned                          space_in_uri:1;
-//
-//	    unsigned                          invalid_header:1;
-//
-//	    unsigned                          add_uri_to_alias:1;
-//	    unsigned                          valid_location:1;
-//	    unsigned                          valid_unparsed_uri:1;
-//	    unsigned                          uri_changed:1;
-//	    unsigned                          uri_changes:4;
-//
-//	    unsigned                          request_body_in_single_buf:1;
-//	    unsigned                          request_body_in_file_only:1;
-//	    unsigned                          request_body_in_persistent_file:1;
-//	    unsigned                          request_body_in_clean_file:1;
-//	    unsigned                          request_body_file_group_access:1;
-//	    unsigned                          request_body_file_log_level:3;
-//
-//	    unsigned                          subrequest_in_memory:1;
-//	    unsigned                          waited:1;
-//
-//	#if (NGX_HTTP_CACHE)
-//	    unsigned                          cached:1;
-//	#endif
-//
-//	#if (NGX_HTTP_GZIP)
-//	    unsigned                          gzip_tested:1;
-//	    unsigned                          gzip_ok:1;
-//	    unsigned                          gzip_vary:1;
-//	#endif
-//
-//	    unsigned                          proxy:1;
-//	    unsigned                          bypass_cache:1;
-//	    unsigned                          no_cache:1;
-//
-//	    /*
-//	     * instead of using the request context data in
-//	     * ngx_http_limit_conn_module and ngx_http_limit_req_module
-//	     * we use the single bits in the request structure
-//	     */
-//	    unsigned                          limit_conn_set:1;
-//	    unsigned                          limit_req_set:1;
-//
-//	#if 0
-//	    unsigned                          cacheable:1;
-//	#endif
-//
-//	    unsigned                          pipeline:1;
-//	    unsigned                          chunked:1;
-//	    unsigned                          header_only:1;
-//	    unsigned                          keepalive:1;
-//	    unsigned                          lingering_close:1;
-//	    unsigned                          discard_body:1;
-//	    unsigned                          internal:1;
-//	    unsigned                          error_page:1;
-//	    unsigned                          ignore_content_encoding:1;
-//	    unsigned                          filter_finalize:1;
-//	    unsigned                          post_action:1;
-//	    unsigned                          request_complete:1;
-//	    unsigned                          request_output:1;
-//	    unsigned                          header_sent:1;
-//	    unsigned                          expect_tested:1;
-//	    unsigned                          root_tested:1;
-//	    unsigned                          done:1;
-//	    unsigned                          logged:1;
-//
-//	    unsigned                          buffered:4;
-//
-//	    unsigned                          main_filter_need_in_memory:1;
-//	    unsigned                          filter_need_in_memory:1;
-//	    unsigned                          filter_need_temporary:1;
-//	    unsigned                          allow_ranges:1;
-//
-//	#if (NGX_STAT_STUB)
-//	    unsigned                          stat_reading:1;
-//	    unsigned                          stat_writing:1;
-//	#endif
-//
-//	    /* used to parse HTTP headers */
-//
-//	    uint32_t                        state;
-//
-//	    uint32_t                        header_hash;
-//	    uint32_t                        lowcase_index;
-//	    //u_char                           lowcase_header[NGX_HTTP_LC_HEADER_LEN];
-//
-//	    u_char                           *header_name_start;
-//	    u_char                           *header_name_end;
-//	    u_char                           *header_start;
-//	    u_char                           *header_end;
-//
-//	    /*
-//	     * a memory that can be reused after parsing a request line
-//	     * via ngx_http_ephemeral_t
-//	     */
-//
-//	    u_char                           *uri_start;
-//	    u_char                           *uri_end;
-//	    u_char                           *uri_ext;
-//	    u_char                           *args_start;
-//	    u_char                           *request_start;
-//	    u_char                           *request_end;
-//	    u_char                           *method_end;
-//	    u_char                           *schema_start;
-//	    u_char                           *schema_end;
-//	    u_char                           *host_start;
-//	    u_char                           *host_end;
-//	    u_char                           *port_start;
-//	    u_char                           *port_end;
-//
-//	    unsigned                       http_minor:16;
-//	    unsigned                        http_major:16;
+     CurrentInfo  current;
+	  HeaderInfo 	hdr_info;
+     SquidLogInfo squid_codes;
+     HttpApiInfo  api_info;
+     // To handle parent proxy case, we need to be
+     //  able to defer some work in building the request
 
 
+     // Sandbox of Variables
+     StateMachineAction_t cdn_saved_next_action;
+//     void (*cdn_saved_transact_return_point) (State* s);
+     bool cdn_remap_complete;
+     bool first_dns_lookup;
+
+     ParentConfigParams *parent_params;
+     ParentResult parent_result;
+     HttpRequestData request_data;
+     CacheControlResult cache_control;
+     CacheLookupResult_t cache_lookup_result;
+      FilterResult             content_control;
+     bool backdoor_request;      // internal
+     bool cop_test_page;         // internal
+
+//     StateMachineAction_t next_action;   // out
+//     StateMachineAction_t api_next_action;       // out
+     void (*transact_return_point) (HttpTransact::State* s);    // out
+     char *internal_msg_buffer;  // out
+     char *internal_msg_buffer_type;     // out
+     int64_t internal_msg_buffer_size;       // out
+     int64_t internal_msg_buffer_fast_allocator_size;
+     int64_t internal_msg_buffer_index;      // out
+
+     bool icp_lookup_success;    // in
+     struct sockaddr_in icp_ip_result;   // in
+
+     int scheme;                 // out
+     int next_hop_scheme;        // out
+     int orig_scheme;            // pre-mapped scheme
+     int method;
+     HostDBInfo host_db_info;    // in
+     int cause_of_death_errno;   // in
+
+     ink_time_t client_request_time;     // internal
+     ink_time_t request_sent_time;       // internal
+     ink_time_t response_received_time;  // internal
+     ink_time_t plugin_set_expire_time;
+
+     char via_string[MAX_VIA_INDICES + 1];
+
+     int64_t state_machine_id;
+
+     HttpAuthParams auth_params;
+
+     StatBlock first_stats;
+     StatBlock *current_stats;
+
+     // for negative caching
+     bool negative_caching;
+     // for srv_lookup
+     bool srv_lookup;
+     // for authenticated content caching
+     CacheAuth_t www_auth_content;
+
+     // new ACL filtering result (calculated immediately after remap)
+     bool client_connection_enabled;
+     bool acl_filtering_performed;
+
+     // INK API/Remap API plugin interface
+//     remap_plugin_info::_tsremap_os_response *fp_tsremap_os_response;
+     void* remap_plugin_instance;
+     HTTPStatus http_return_code;
+     int return_xbuf_size;
+     bool return_xbuf_plain;
+     char return_xbuf[HTTP_TRANSACT_STATE_MAX_XBUF_SIZE];
+     void *user_args[HTTP_SSN_TXN_MAX_USER_ARG];
+
+     int api_txn_active_timeout_value;
+     int api_txn_connect_timeout_value;
+     int api_txn_dns_timeout_value;
+     int api_txn_no_activity_timeout_value;
+
+     // Used by INKHttpTxnCachedReqGet and INKHttpTxnCachedRespGet SDK functions
+     // to copy part of HdrHeap (only the writable portion) for cached response headers
+     // and request headers
+     // These ptrs are deallocate when transaction is over.
+     HdrHeapSDKHandle *cache_req_hdr_heap_handle;
+     HdrHeapSDKHandle *cache_resp_hdr_heap_handle;
+     bool api_release_server_session;
+     bool api_cleanup_cache_read;
+     bool api_server_response_no_store;
+     bool api_server_response_ignore;
+     bool api_http_sm_shutdown;
+     bool api_modifiable_cached_resp;
+
+     bool api_server_request_body_set;
+       //请求是否缓存
+     bool req_cacheable;
+      //回源的返回的内容是否缓存
+     bool response_cacheable;
+       //是否指定了回源的IP
+     bool server_addr_set;
+//     UpdateCachedObject_t api_update_cached_object;
+//     LockUrl_t api_lock_url;
+//     StateMachineAction_t saved_update_next_action;
+//     CacheAction_t saved_update_cache_action;
+
+     // Remap plugin processor support
+     UrlMappingContainer url_map;
+     host_hdr_info hh_info;
+
+     // congestion control
+     CongestionEntry *pCongestionEntry;
+     StateMachineAction_t congest_saved_next_action;
+     int congestion_control_crat;        // 'client retry after'
+     int congestion_congested_or_failed;
+     int congestion_connection_opened;
+
+     bool reverse_proxy;
+     bool url_remap_success;
+     char *remap_redirect;
+     unsigned int filter_mask;
+
+     bool already_downgraded;
+     URL pristine_url;  // pristine url is the url before remap
+
+     bool api_skip_all_remapping;
+
+     // Http Range: related variables
+//     RangeSetup_t range_setup;
+     int64_t num_range_fields;
+     int64_t range_output_cl;
+//     RangeRecord *ranges;
+
+     OverridableHttpConfigParams *txn_conf;
+     OverridableHttpConfigParams my_txn_conf; // Storage for plugins, to avoid malloc
+
+     bool transparent_passthrough;
+
+     // Methods
+     void
+     init()
+     {
+       parent_params = ParentConfig::acquire();
+       current_stats = &first_stats;
+     }
 };
 
 #endif /* HTTPREQUEST_H_ */

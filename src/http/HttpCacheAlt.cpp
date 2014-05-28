@@ -6,9 +6,11 @@
  */
 
 #include "HttpCacheAlt.h"
+#include "HdrHeap.h"
 #include <stddef.h>
 
 ClassAllocator<HttpCacheAlt> HttpCacheAltAllocator("HttpCacheAltAllocator");
+const int HTTP_ALT_MARSHAL_SIZE = ROUND(sizeof(HttpCacheAlt), HDR_PTR_SIZE);
 
 /*-------------------------------------------------------------------------
   -------------------------------------------------------------------------*/
@@ -112,6 +114,5 @@ HttpCacheAlt::copy_frag_offsets_from(HttpCacheAlt *src)
 	}
 }
 
-const int HTTP_ALT_MARSHAL_SIZE = ROUND(sizeof(HttpCacheAlt), HDR_PTR_SIZE);
 
 
