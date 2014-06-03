@@ -12,8 +12,9 @@
 #include "P_IOBuffer.h"
 
 static int next_sm_id = 0;
-#define HTTP_SM_MAGIC_ALIVE 1
-#define HTTP_SM_MAGIC_DEAD  0
+#define OC_HTTP_SM_MAGIC_ALIVE 1
+#define OC_HTTP_SM_MAGIC_DEAD  0
+
 
 ClassAllocator<HttpStateMachine> httpSMAllocator("httpClientSessionAllocator");
 HttpStateMachine::HttpStateMachine()
@@ -39,7 +40,7 @@ HttpStateMachine::allocate()
 int
 HttpStateMachine::handle_open  (const URE_Msg& msg)
 {
-	magic = HTTP_SM_MAGIC_ALIVE;
+	magic = OC_HTTP_SM_MAGIC_ALIVE;
 
 	statemachine_id = 0;
 	statemachine_id = (int64_t) ink_atomic_increment((&next_sm_id), 1);
@@ -50,9 +51,10 @@ HttpStateMachine::handle_open  (const URE_Msg& msg)
 	msg.SetInt64(0);
 	msg.SetType(HTTP_SM_START);
 
-	current_hook_type = HTTP_SM_START;
+	current_phase = OC_HTTP_SM_START_PHASE;
 	request = new HttpRequest(this);
-	do_api_callout();
+	main_state_machine(0);
+	//do_api_callout();
 
 	return 0;
 }
@@ -86,9 +88,22 @@ HttpStateMachine::handle_timeout( const TimeValue & origts, long time_id, const 
 int
 HttpStateMachine::handle_message( const URE_Msg & msg )
 {
-	current_hook_type = msg.GetType();
-	current_hook_id = msg.GetInt64();
-	do_api_callout();
+	int64_t phase = msg.GetType();
+	int64_t event = msg.GetInt64();
+	switch(event){
+	case HTTP_EVENT_ERROR:
+		handle_close(GetWorkEnv(), 0);
+		break;
+
+	case HTTP_EVENT_EOS:
+	case HTTP_EVENT_READ_READY:
+	default:
+		main_state_machine(event);
+		break;
+	}
+//	current_hook_type = msg.GetType();
+//	current_hook_id = msg.GetInt64();
+//	do_api_callout();
 	return 0;
 }
 
@@ -96,6 +111,211 @@ int HttpStateMachine::handle_failed_message( const URE_Msg & msg )
 {
 	return 0;
 }
+
+
+int32_t HttpStateMachine::main_state_machine(int event)
+{
+	if(magic != OC_HTTP_SM_MAGIC_ALIVE){
+		return 0;
+	}
+
+	switch(current_phase)
+	{
+		case OC_HTTP_SM_START_PHASE:
+			return do_http_sm_start(event);
+		case OC_HTTP_POST_READ_PHASE:
+			return do_http_post_read(event);
+		case OC_HTTP_SERVER_REWRITE_PHASE:
+			return do_http_server_rewrite(event);
+		case OC_HTTP_FIND_CONFIG_PHASE:
+			return do_http_find_config(event);
+		case OC_HTTP_REWRITE_PHASE:
+			return do_http_rewrite(event);
+		case OC_HTTP_POST_REWRITE_PHASE:
+			return do_http_post_rewrite(event);
+		case OC_HTTP_PREACCESS_PHASE:
+			return do_http_preaccess(event);
+		case OC_HTTP_ACCESS_PHASE:
+			return do_http_access(event);
+		case OC_HTTP_POST_ACCESS_PHASE:
+			return do_http_pose_access(event);
+		case OC_HTTP_TRY_FILES_PHASE:
+			return do_http_try_files(event);
+		case OC_HTTP_CONTENT_PHASE:
+			return do_http_content(event);
+		case OC_HTTP_LOG_PHASE:
+			return do_http_log(event);
+		case OC_HTTP_SM_END_PHASE:
+			return do_http_sm_stop(event);
+		default:
+			//TODO
+			break;
+	}
+	return 0;
+}
+
+int32_t HttpStateMachine::do_http_sm_start(int event)
+{
+	if (request->port_attribute == TRANSPORT_BLIND_TUNNEL)
+	{
+		setup_blind_tunnel_port();
+	}
+	else
+	{
+		setup_client_read_request_header();
+	}
+	return 0;
+}
+
+int32_t
+HttpStateMachine::do_http_sm_stop(int event)
+{
+	return 0;
+}
+
+int32_t
+HttpStateMachine::do_http_post_read(int event)
+{
+	switch(event){
+	case HTTP_EVENT_ERROR:
+		handle_close(GetWorkEnv(), 0);
+		break;
+	case HTTP_EVENT_EOS:
+	case HTTP_EVENT_READ_READY:
+		if(ua_buffer_reader->read_avail() > 0){
+
+		}else{
+			//client_session->reenable()
+		}
+	}
+	return 0;
+}
+
+int32_t
+HttpStateMachine::do_http_server_rewrite(int event)
+{
+	switch(event){
+	case HTTP_EVENT_ERROR:
+		//handle_close(GetWorkEnv(), 0);
+		break;
+	case HTTP_EVENT_EOS:
+	case HTTP_EVENT_READ_READY:
+		if(ua_buffer_reader->read_avail() > 0){
+
+		}else{
+			//client_session->reenable()
+		}
+	}
+	return 0;
+}
+
+int32_t
+HttpStateMachine::do_http_find_config(int event)
+{
+	return 0;
+}
+
+int32_t
+HttpStateMachine::do_http_rewrite(int event)
+{
+	return 0;
+}
+
+int32_t
+HttpStateMachine::do_http_post_rewrite(int event)
+{
+	return 0;
+}
+
+int32_t
+HttpStateMachine::do_http_preaccess(int event)
+{
+	return 0;
+}
+
+int32_t
+HttpStateMachine::do_http_access(int event)
+{
+	return 0;
+}
+
+int32_t
+HttpStateMachine::do_http_pose_access(int event)
+{
+	return 0;
+}
+
+int32_t
+HttpStateMachine::do_http_try_files(int event)
+{
+	return 0;
+}
+
+int32_t
+HttpStateMachine::do_http_content(int event)
+{
+	switch(event){
+
+	case TRANSFORM_READ:
+	{
+	  HttpTunnelProducer *p = setup_transfer_from_transform();
+	  perform_transform_cache_write_action();
+	  tunnel.tunnel_run(p);
+	  break;
+	}
+	case SERVER_READ:
+	{
+	  setup_server_transfer();
+	  perform_cache_write_action();
+	  tunnel.tunnel_run();
+	  break;
+	}
+	case SERVE_FROM_CACHE:
+	{
+	  setup_cache_read_transfer();
+	  tunnel.tunnel_run();
+	  break;
+	}
+
+	case PROXY_INTERNAL_CACHE_WRITE:
+	{
+	  if (cache_sm.cache_write_vc) {
+		setup_internal_transfer(&HttpStateMachine::tunnel_handler_cache_fill);
+	  } else {
+		setup_internal_transfer(&HttpStateMachine::tunnel_handler);
+		}
+	  break;
+	}
+
+	case PROXY_INTERNAL_CACHE_NOOP:
+	case PROXY_INTERNAL_CACHE_DELETE:
+	case PROXY_INTERNAL_CACHE_UPDATE_HEADERS:
+	case PROXY_SEND_ERROR_CACHE_NOOP:
+	{
+	  setup_internal_transfer(&HttpStateMachine::tunnel_handler);
+	  break;
+	}
+
+	case REDIRECT_READ:
+	{
+	  call_transact_and_set_next_state(HandleRequest);
+	  break;
+	}
+
+	default:
+	{
+	 // ink_release_assert(!"Should not get here");
+	}
+	}
+	return 0;
+}
+
+int32_t
+HttpStateMachine::do_http_log(int event)
+{
+	return 0;
+}
+
 
 int32_t
 HttpStateMachine::do_api_callout()
@@ -147,25 +367,25 @@ HttpStateMachine::do_api_callout()
 		    }
 		  case SERVER_READ:
 		    {
-//		      setup_server_transfer();
-//		      perform_cache_write_action();
-//		      tunnel.tunnel_run();
+		      setup_server_transfer();
+		      perform_cache_write_action();
+		      tunnel.tunnel_run();
 		      break;
 		    }
 		  case SERVE_FROM_CACHE:
 		    {
-//		      setup_cache_read_transfer();
-//		      tunnel.tunnel_run();
+		      setup_cache_read_transfer();
+		      tunnel.tunnel_run();
 		      break;
 		    }
 
 		  case PROXY_INTERNAL_CACHE_WRITE:
 		    {
-//		      if (cache_sm.cache_write_vc) {
-//		        setup_internal_transfer(&HttpStateMachine::tunnel_handler_cache_fill);
-//		      } else {
-//		        setup_internal_transfer(&HttpStateMachine::tunnel_handler);
-//		      	}
+		      if (cache_sm.cache_write_vc) {
+		        setup_internal_transfer(&HttpStateMachine::tunnel_handler_cache_fill);
+		      } else {
+		        setup_internal_transfer(&HttpStateMachine::tunnel_handler);
+		      	}
 		      break;
 		    }
 
@@ -174,13 +394,13 @@ HttpStateMachine::do_api_callout()
 		  case PROXY_INTERNAL_CACHE_UPDATE_HEADERS:
 		  case PROXY_SEND_ERROR_CACHE_NOOP:
 		    {
-//		      setup_internal_transfer(&HttpStateMachine::tunnel_handler);
+		      setup_internal_transfer(&HttpStateMachine::tunnel_handler);
 		      break;
 		    }
 
 		  case REDIRECT_READ:
 		    {
-		     // call_transact_and_set_next_state(HandleRequest);
+		      call_transact_and_set_next_state(HandleRequest);
 		      break;
 		    }
 
@@ -223,10 +443,12 @@ HttpStateMachine::attach_client_session(HttpClientSession* client_session, IOBuf
 int32_t
 HttpStateMachine::setup_client_read_request_header(){
 
-	client_session-> do_io_read( this,INT64_MAX, ua_buffer_reader->mbuf);
+	client_session-> do_io_read( this, INT64_MAX, ua_buffer_reader->mbuf);
 	if(ua_buffer_reader->read_avail() > 0){
-		do_handle(CON_EVENT_READ_READY, ua_entry->read_vio);
-		//handle(VC_EVENT_READ_READY, ua_entry->read_vio);
+		sm_msg.SetType(this->current_phase);
+		sm_msg.SetInt64(HTTP_EVENT_READ_READY);
+		current_phase = OC_HTTP_POST_READ_PHASE;
+		handle_message(sm_msg);
 	}
 	return 0;
 }
@@ -277,7 +499,7 @@ HttpStateMachine::setup_transfer_from_transform(){
 	transform_info.entry->in_tunnel = true;
 	ua_entry->in_tunnel = true;
 
-	this->setup_plugin_agents(p);
+//	this->setup_plugin_agents(p);
 //
 //	if ( request->client_info.receive_chunked_response ) {
 //	  tunnel.set_producer_chunking_action(p, client_response_hdr_bytes, TCA_CHUNK_CONTENT);
@@ -358,107 +580,34 @@ HttpStateMachine::set_next_state()
 
   case DNS_LOOKUP:
     {
-      sockaddr const* addr;
-
-      if (request->server_addr_set) {
-        /* If the API has set the server address before the OS DNS lookup
-         * then we can skip the lookup
-          */
-        ip_text_buffer ipb;
-        //DebugSM("dns", "[HandleRequest] Skipping DNS lookup for API supplied target %s.\n", ats_ip_ntop(&request->server_info.addr, ipb, sizeof(ipb)));
-        // this seems wasteful as we will just copy it right back
-        //ats_ip_copy(request->host_db_info.ip(), &request->server_info.addr);
-        //request->dns_info.lookup_success = true;
-        call_transact_and_set_next_state(NULL);
-        break;
-      } else if (url_remap_mode == 2 && request->first_dns_lookup) {
-       // DebugSM("cdn", "Skipping DNS Lookup");
-        // skip the DNS lookup
-    	  request->first_dns_lookup = false;
-        call_transact_and_set_next_state(HandleFiltering);
-        break;
-      } else  if (request->http_config_param->use_client_target_addr
-        && !request->url_remap_success
-        && request->parent_result.r != PARENT_SPECIFIED
-        && request->client_info.is_transparent
-        && request->dns_info.os_addr_style == DNSLookupInfo::OS_ADDR_TRY_DEFAULT
-        && ats_is_ip(addr = request->state_machine->ua_session->get_netvc()->get_local_addr())
-      ) {
-        /* If the connection is client side transparent and the URL
-         * was not remapped/directed to parent proxy, we can use the
-         * client destination IP address instead of doing a DNS
-         * lookup. This is controlled by the 'use_client_target_addr'
-         * configuration parameter.
-         */
-        if (is_debug_tag_set("dns")) {
-          ip_text_buffer ipb;
-          //DebugSM("dns", "[HandleRequest] Skipping DNS lookup for client supplied target %s.\n", ats_ip_ntop(addr, ipb, sizeof(ipb)));
-        	}
-        //ats_ip_copy(request->host_db_info.ip(), addr);
-        /* Since we won't know the server HTTP version (no hostdb lookup), we assume it matches the
-         * client request version. Seems to be the most correct thing to do in the transparent use-case.
-         */
-        if (request->hdr_info.client_request.version_get() == HTTPVersion(0, 9)){
-        	//request->host_db_info.app.http_data.http_version =  HostDBApplicationInfo::HTTP_VERSION_09;
-        }else if (request->hdr_info.client_request.version_get() == HTTPVersion(1, 0)){
-        	//request->host_db_info.app.http_data.http_version =  HostDBApplicationInfo::HTTP_VERSION_10;
-        }else{
-        	//request->host_db_info.app.http_data.http_version =  HostDBApplicationInfo::HTTP_VERSION_11;
-           }
-
-        request->dns_info.lookup_success = true;
-        // cache this result so we don't have to unreliably duplicate the
-        // logic later if the connect fails.
-        request->dns_info.os_addr_style = DNSLookupInfo::OS_ADDR_TRY_CLIENT;
-        call_transact_and_set_next_state(NULL);
-        break;
-      } else if (request->parent_result.r == PARENT_UNDEFINED && request->dns_info.lookup_success) {
-        // Already set, and we don't have a parent proxy to lookup
-//        ink_assert(ats_is_ip(request->host_db_info.ip()));
-//        DebugSM("dns", "[HandleRequest] Skipping DNS lookup, provided by plugin");
-        call_transact_and_set_next_state(NULL);
-        break;
-      } else if (request->dns_info.looking_up == ORIGIN_SERVER &&
-    		  request->http_config_param->no_dns_forward_to_parent){
-
-        if (request->cop_test_page)
-          ats_ip_copy(request->host_db_info.ip(), request->state_machine->ua_session->get_netvc()->get_local_addr());
-
-        request->dns_info.lookup_success = true;
-        call_transact_and_set_next_state(NULL);
-        break;
-      }
-
-      HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_hostdb_lookup);
-
-      ink_assert(request->dns_info.looking_up != UNDEFINED_LOOKUP);
       do_hostdb_lookup();
       break;
     }
 
   case REVERSE_DNS_LOOKUP:
     {
-      HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_hostdb_reverse_lookup);
+//      HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_hostdb_reverse_lookup);
       do_hostdb_reverse_lookup();
       break;
     }
 
   case CACHE_LOOKUP:
     {
-      HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_cache_open_read);
+//      HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_cache_open_read);
       do_cache_lookup_and_read();
       break;
     }
 
   case ORIGIN_SERVER_OPEN:
     {
-      if (congestionControlEnabled && (request->congest_saved_next_action == STATE_MACHINE_ACTION_UNDEFINED)) {
+      if (enable_congestion_control && (request->congest_saved_next_action == STATE_MACHINE_ACTION_UNDEFINED)) {
         request->congest_saved_next_action = ORIGIN_SERVER_OPEN;
-        HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_congestion_control_lookup);
-        if (!do_congestion_control_lookup())
+        //HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_congestion_control_lookup);
+        if (!do_congestion_control_lookup()){
           break;
-      }
-      HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_http_server_open);
+			}
+		  }
+      //HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_http_server_open);
 
       // We need to close the previous attempt
       if (server_entry) {
@@ -479,8 +628,8 @@ HttpStateMachine::set_next_state()
         // cannot be cancelled.
         if (ua_session && !request->hdr_info.request_content_length) {
           ua_session->get_netvc()->cancel_inactivity_timeout();
-        }
-      }
+			}
+		  }
 
       do_http_server_open();
       break;
@@ -525,9 +674,9 @@ HttpStateMachine::set_next_state()
 
   case SERVE_FROM_CACHE:
     {
-      ink_assert(request->cache_info.action == CACHE_DO_SERVE ||
-                 request->cache_info.action == CACHE_DO_SERVE_AND_DELETE ||
-                 request->cache_info.action == CACHE_DO_SERVE_AND_UPDATE);
+//      ink_assert(request->cache_info.action == CACHE_DO_SERVE ||
+//                 request->cache_info.action == CACHE_DO_SERVE_AND_DELETE ||
+//                 request->cache_info.action == CACHE_DO_SERVE_AND_UPDATE);
       release_server_session(true);
       request->source = SOURCE_CACHE;
 
@@ -631,7 +780,7 @@ HttpStateMachine::set_next_state()
       if (action_handle != ACTION_RESULT_DONE) {
         pending_action = action_handle;
         historical_action = pending_action;
-      }
+      	  }
 
       break;
     }
@@ -645,7 +794,7 @@ HttpStateMachine::set_next_state()
       // TODO: This might not be optimal (or perhaps even correct), but it will
       // effectively mark the host as down. What's odd is that state_mark_os_down
       // above isn't triggering.
-      HttpStateMachine::do_hostdb_update_if_necessary();
+      //HttpStateMachine::do_hostdb_update_if_necessary();
 
       do_hostdb_lookup();
       break;
@@ -658,7 +807,7 @@ HttpStateMachine::set_next_state()
     }
 
   case ORIGIN_SERVER_RAW_OPEN:{
-      if (congestionControlEnabled && (request->congest_saved_next_action == STATE_MACHINE_ACTION_UNDEFINED)) {
+      if (enable_congestion_control&& (request->congest_saved_next_action == STATE_MACHINE_ACTION_UNDEFINED)) {
         request->congest_saved_next_action = ORIGIN_SERVER_RAW_OPEN;
         HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_congestion_control_lookup);
         if (!do_congestion_control_lookup())
@@ -672,12 +821,6 @@ HttpStateMachine::set_next_state()
       break;
     }
 
-  case ICP_QUERY:
-    {
-      HTTP_SM_SET_DEFAULT_HANDLER(&HttpStateMachine::state_icp_lookup);
-      do_icp_lookup();
-      break;
-    }
 
   case CACHE_ISSUE_WRITE_TRANSFORM:
     {
@@ -729,7 +872,7 @@ HttpStateMachine::set_next_state()
       if (request->api_update_cached_object == UPDATE_CACHED_OBJECT_ERROR) {
         request->cache_info.object_read = NULL;
         cache_sm.close_read();
-      }
+      	  }
       issue_cache_update();
       call_transact_and_set_next_state(NULL);
       break;
@@ -773,7 +916,7 @@ HttpStateMachine::main_handler(int event, void *data)
   //  space that we don't care about
  // DebugSM("http", "[%" PRId64 "] [HttpSM::main_handler, %s]", sm_id, HttpDebugNames::get_event_name(event));
 
-//  HttpVCTableEntry *vc_entry = NULL;
+  HttpVCTableEntry *vc_entry = NULL;
 
   if (data != NULL) {
     // Only search the VC table if the event could have to
@@ -853,4 +996,118 @@ int32_t
 HttpStateMachine::do_rewrite_request(bool )
 {
 	return 0;
+}
+
+int32_t
+do_hostdb_lookup()
+{
+	return 0;
+}
+
+int32_t
+do_hostdb_reverse_lookup()
+{
+	return 0;
+}
+
+int32_t
+state_congestion_control_lookup()
+{
+	return 0;
+}
+
+int32_t
+do_congestion_control_lookup()
+{
+	return 0;
+}
+
+int32_t
+do_http_server_open(bool test = true)
+{
+	return 0;
+}
+
+int32_t
+setup_server_read_response_header()
+{
+	return 0;
+}
+
+int32_t
+setup_100_continue_transfer()
+{
+	return 0;
+}
+
+int32_t
+setup_push_read_response_header()
+{
+	return 0;
+}
+
+int32_t
+perform_cache_write_action()
+{
+	return 0;
+}
+
+int32_t
+setup_push_transfer_to_cache()
+{
+	return 0;
+}
+
+int32_t
+do_cache_prepare_update()
+{
+	return 0;
+}
+
+int32_t
+issue_cache_update()
+{
+	return 0;
+}
+
+int32_t
+release_server_session(bool test = false )
+{
+	return 0;
+}
+
+int32_t setup_error_transfer()
+{
+	return 0;
+}
+
+int32_t setup_server_transfer()
+{
+	return 0;
+}
+
+int32_t do_cache_prepare_write_transform()
+{
+	return 0;
+}
+
+int32_t setup_blind_tunnel(bool)
+{
+	return 0;
+}
+
+int32_t do_cache_delete_all_alts()
+{
+	return 0;
+}
+
+int32_t do_cache_lookup_and_read()
+{
+	return 0;
+}
+
+
+HttpTunnelProducer* setup_server_transfer_to_transform()
+{
+	return NULL;
 }

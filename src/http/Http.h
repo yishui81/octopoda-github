@@ -54,7 +54,7 @@
 #include "HttpVariable.h"
 #include "HttpConnectionAttributes.h"
 #include "HttpTransact.h"
-
+#include "Connector.h"
 
 #include "ink_apidefs.h"
 
@@ -62,7 +62,27 @@
 #define MAX_CONSUMERS   4
 
 
-#define CON_EVENT_EVENTS_START                     100
+#define HTTP_EVENT_NONE							 CON_EVENT_NONE
+#define HTTP_EVENT_IMMEDIATE					 CON_EVENT_IMMEDIATE
+
+#define HTTP_EVENT_EVENTS_START            CON_EVENT_EVENTS_START
+#define HTTP_EVENT_READ_READY              CON_EVENT_READ_READY
+
+
+#define	HTTP_EVENT_WRITE_READY             CON_EVENT_WRITE_READY
+#define	HTTP_EVENT_READ_COMPLETE           CON_EVENT_READ_COMPLETE
+#define	HTTP_EVENT_WRITE_COMPLETE          CON_EVENT_WRITE_COMPLETE
+
+#define	HTTP_EVENT_EOS                     CON_EVENT_EOS
+#define	HTTP_EVENT_ERROR                   CON_EVENT_ERROR
+
+#define	HTTP_EVENT_INACTIVITY_TIMEOUT      CON_EVENT_INACTIVITY_TIMEOUT
+#define	HTTP_EVENT_ACTIVE_TIMEOUT          CON_EVENT_ACTIVE_TIMEOUT
+
+#define	HTTP_EVENT_OOB_COMPLETE            CON_EVENT_OOB_COMPLETE
+
+
+#define CON_EVENT_EVENTS_START                    100
 #define NET_EVENT_EVENTS_START                    200
 #define DISK_EVENT_EVENTS_START                   300
 #define CLUSTER_EVENT_EVENTS_START                400
@@ -100,6 +120,8 @@
 #define HTTP_TUNNEL_EVENT_DONE             (HTTP_TUNNEL_EVENTS_START + 1)
 #define HTTP_TUNNEL_EVENT_PRECOMPLETE      (HTTP_TUNNEL_EVENTS_START + 2)
 #define HTTP_TUNNEL_EVENT_CONSUMER_DETACH  (HTTP_TUNNEL_EVENTS_START + 3)
+
+#define HTTP
 
 
 enum HTTPStatus

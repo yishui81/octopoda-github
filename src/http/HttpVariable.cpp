@@ -7,12 +7,93 @@
 
 #include "HttpVariable.h"
 
-HttpVariable::HttpVariable() {
-	// TODO Auto-generated constructor stub
+
+
+HttpVariables::HttpVariables()
+	: request(NULL)
+{
 
 }
 
-HttpVariable::~HttpVariable() {
+HttpVariables::~HttpVariables()
+{
 	// TODO Auto-generated destructor stub
 }
 
+
+int64_t
+HttpVariables::get_http_request_size()
+{
+	return 0;
+}
+
+Str&    HttpVariables::get_http_request_cookies()
+{
+	return 0;
+}
+
+Str&	  HttpVariables::get_http_request_line()
+{
+	return 0;
+}
+
+int32_t HttpVariables::get_http_sent_connection()
+{
+	return 0;
+}
+
+int32_t HttpVariables::get_http_sent_last_modified()
+{
+	return 0;
+}
+
+int32_t HttpVariables::get_http_sent_keep_alive()
+{
+	return 0;
+}
+
+int32_t HttpVariables::get_http_sent_transfer_encoding()
+{
+	return 0;
+}
+
+int32_t HttpVariables::get_http_connection()
+{
+	return 0;
+}
+
+int32_t HttpVariables::get_http_connection_requests()
+{
+	return 0;
+}
+
+int32_t HttpVariables::get_http_hostname()
+{
+	return 0;
+}
+
+int32_t HttpVariables::get_http_version()
+{
+	return 0;
+}
+
+int32_t HttpVariables::get_http_pid()
+{
+	return 0;
+}
+
+int32_t HttpVariables::get_http_time_msec()
+{
+	return 0;
+}
+
+int32_t HttpVariables::get_http_time_iso8601()
+{
+	return 0;
+}
+
+int32_t
+HttpVariables::get_http_variable_time_local()
+{
+	return 0;
+}

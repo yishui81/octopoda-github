@@ -8,7 +8,7 @@
 #ifndef HTTPREQUEST_H_
 #define HTTPREQUEST_H_
 #include "Http.h"
-
+#include "HttpTransact.h"
 class HostDBInfo;
 
 enum StateMachineAction_t
@@ -89,10 +89,10 @@ public:
      Arena arena;
 
      HttpConfigParams *http_config_param;
-//     CacheLookupInfo cache_info;
+     CacheLookupInfo cache_info;
      bool force_dns;
-//     DNSLookupInfo dns_info;
-//     RedirectInfo redirect_info;
+     DNSLookupInfo dns_info;
+     RedirectInfo redirect_info;
      unsigned int updated_server_version;
      bool is_revalidation_necessary;     //Added to check if revalidation is necessary - YTS Team, yamsat
      bool request_will_not_selfloop;     // To determine if process done - YTS Team, yamsat
@@ -120,12 +120,12 @@ public:
      bool cdn_remap_complete;
      bool first_dns_lookup;
 
-     ParentConfigParams *parent_params;
-     ParentResult parent_result;
-     HttpRequestData request_data;
-     CacheControlResult cache_control;
+//     ParentConfigParams *parent_params;
+//     ParentResult parent_result;
+//     HttpRequestData request_data;
+//     CacheControlResult cache_control;
      CacheLookupResult_t cache_lookup_result;
-      FilterResult             content_control;
+//      FilterResult             content_control;
      bool backdoor_request;      // internal
      bool cop_test_page;         // internal
 
@@ -138,8 +138,8 @@ public:
      int64_t internal_msg_buffer_fast_allocator_size;
      int64_t internal_msg_buffer_index;      // out
 
-     bool icp_lookup_success;    // in
-     struct sockaddr_in icp_ip_result;   // in
+//     bool icp_lookup_success;    // in
+//     struct sockaddr_in icp_ip_result;   // in
 
      int scheme;                 // out
      int next_hop_scheme;        // out
@@ -157,7 +157,7 @@ public:
 
      int64_t state_machine_id;
 
-     HttpAuthParams auth_params;
+//     HttpAuthParams auth_params;
 
      StatBlock first_stats;
      StatBlock *current_stats;
@@ -213,11 +213,11 @@ public:
 //     CacheAction_t saved_update_cache_action;
 
      // Remap plugin processor support
-     UrlMappingContainer url_map;
-     host_hdr_info hh_info;
+//     UrlMappingContainer url_map;
+//     host_hdr_info hh_info;
 
      // congestion control
-     CongestionEntry *pCongestionEntry;
+//     CongestionEntry *pCongestionEntry;
      StateMachineAction_t congest_saved_next_action;
      int congestion_control_crat;        // 'client retry after'
      int congestion_congested_or_failed;
@@ -248,7 +248,7 @@ public:
      void
      init()
      {
-       parent_params = ParentConfig::acquire();
+//       parent_params = ParentConfig::acquire();
        current_stats = &first_stats;
      }
 };

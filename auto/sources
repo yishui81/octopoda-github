@@ -2,7 +2,7 @@
 # Copyright (C) Jacky Wang
 TS_MODULES="oc_ts_module"
 
-TS_INCS="src src/ts"
+TS_INCS="src"
 
 TS_DEPS="ts/Allocator.h \
 			ts/Arena.h \
@@ -78,6 +78,9 @@ TS_DEPS="ts/Allocator.h \
 			ts/Tokenizer.h \
 			ts/Trie.h \
 			ts/TsBuffer.h \
+			ts/I_IOBuffer.h \
+			ts/I_IOBuffer.h \
+			ts/P_IOBuffer.h \
 			ts/Vec.h "
 			
 TS_SRCS="ts/Arena.cc \
@@ -139,7 +142,7 @@ TS_SRCS="ts/Arena.cc \
 
 CORE_MODULES="oc_core_module"
 
-CORE_INCS="src/core ../SealsARE src"
+CORE_INCS="src src/core ../SealsARE src/ts"
 
 CORE_DEPS="src/Octopoda.h \
 				src/core/oc_config.h \
@@ -159,7 +162,7 @@ CORE_SRCS="src/Octopoda.cpp \
 			   
 HTTP_MODULE="oc_http_module"
 
-HTTP_INCS="src/http src/core src"
+HTTP_INCS="src src/http src/core src/ts "
 
 HTTP_DEPS=" src/http/HttpAcceptor.h \
 				src/http/HttpConnector.h \

@@ -34,10 +34,10 @@ public:
      unsigned int updated_server_version;
      bool is_revalidation_necessary;     //Added to check if revalidation is necessary - YTS Team, yamsat
      bool request_will_not_selfloop;     // To determine if process done - YTS Team, yamsat
-     ConnectionAttributes client_info;
-     ConnectionAttributes icp_info;
-     ConnectionAttributes parent_info;
-     ConnectionAttributes server_info;
+     HttpConnectionAttributes client_info;
+     HttpConnectionAttributes icp_info;
+     HttpConnectionAttributes parent_info;
+     HttpConnectionAttributes server_info;
      // ConnectionAttributes     router_info;
 
      Source_t source;

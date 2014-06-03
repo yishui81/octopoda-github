@@ -33,7 +33,7 @@
 #define CON_EVENT_NONE                  	0
 #define CON_EVENT_IMMEDIATE               EVENT_IMMEDIATE
 
-#define  CON_EVENT_EVENTS_START                     100
+#define CON_EVENT_EVENTS_START            100
 #define CON_EVENT_READ_READY              CON_EVENT_EVENTS_START
 
 /**
@@ -41,8 +41,7 @@
   Continuation returns.
 
 */
-#define	CON_EVENT_WRITE_READY               (CON_EVENT_READ_READY+1)
-
+#define	CON_EVENT_WRITE_READY             (CON_EVENT_READ_READY+1)
 #define	CON_EVENT_READ_COMPLETE           (CON_EVENT_READ_READY+2)
 #define	CON_EVENT_WRITE_COMPLETE          (CON_EVENT_READ_READY+3)
 
@@ -65,16 +64,16 @@
        (for a write, no data has been written to the connection)
 
 */
-#define	VC_EVENT_INACTIVITY_TIMEOUT      (VC_EVENT_EVENTS_START+5)
+#define	CON_EVENT_INACTIVITY_TIMEOUT      (CON_EVENT_EVENTS_START+5)
 
 /**
   Total time for some operation has been exeeded, regardless of any
   intermediate progress.
 
 */
-#define	VC_EVENT_ACTIVE_TIMEOUT          (VC_EVENT_EVENTS_START+6)
+#define	CON_EVENT_ACTIVE_TIMEOUT          (CON_EVENT_EVENTS_START+6)
 
-#define	VC_EVENT_OOB_COMPLETE            (VC_EVENT_EVENTS_START+7)
+#define	CON_EVENT_OOB_COMPLETE            (CON_EVENT_EVENTS_START+7)
 
 
 enum SHUTDOWN_TYPE
@@ -123,7 +122,7 @@ private:
 	bool			f_blocking;
 	bool			f_blocking_connect;
 
-	uint16_t        	ip_family;
+	uint16_t       ip_family;
 	uint16_t 		local_port;
 	int32_t			socket_recv_bufsize;
 	int32_t			socket_send_bufsize;
@@ -133,7 +132,7 @@ private:
 
 public:
 
-	inline void
+	void
 	ConnectorOptions::reset()
 	{
 		ip_proto = USE_TCP;
